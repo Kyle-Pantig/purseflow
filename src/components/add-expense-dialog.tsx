@@ -26,6 +26,7 @@ import { DatePicker } from '@/components/date-picker'
 import { Plus } from 'lucide-react'
 import { parseCurrency } from '@/lib/currency'
 import { useCurrency } from '@/contexts/currency-context'
+import { toLocalTimestampString } from '@/lib/date-utils'
 
 const categories = [
   { value: 'transportation', label: 'Transportation' },
@@ -109,7 +110,7 @@ export function AddExpenseDialog({ open: externalOpen, onOpenChange }: AddExpens
         amount: parsedAmount,
         category: category as 'transportation' | 'food' | 'bills' | 'entertainment' | 'shopping' | 'healthcare' | 'education' | 'travel' | 'groceries' | 'utilities' | 'others',
         description: description || undefined,
-        date: date?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
+        date: date ? toLocalTimestampString(date) : toLocalTimestampString(new Date()),
         currency_code: currency.code, // Store the currency the user entered
       })
     } catch (error) {

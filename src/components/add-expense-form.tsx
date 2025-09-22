@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { trpc } from '@/lib/trpc-client'
 import { useCurrency } from '@/contexts/currency-context'
+import { toLocalTimestampString } from '@/lib/date-utils'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -65,7 +66,7 @@ export function AddExpenseForm() {
         amount: parsedAmount,
         category: category as 'transportation' | 'food' | 'bills' | 'entertainment' | 'shopping' | 'healthcare' | 'education' | 'travel' | 'groceries' | 'utilities' | 'others',
         description: description || undefined,
-        date: date?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
+        date: date ? toLocalTimestampString(date) : toLocalTimestampString(new Date()),
         currency_code: currency.code, // Store the currency the user entered
       })
     } catch (error) {

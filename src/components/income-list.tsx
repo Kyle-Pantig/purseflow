@@ -11,6 +11,7 @@ import { DeleteIncomeDialog } from '@/components/delete-income-dialog'
 import { trpc } from '@/lib/trpc-client'
 import { formatCurrency } from '@/lib/currency'
 import { useCurrency } from '@/contexts/currency-context'
+import { formatDateForDisplay, formatTimestampForDisplay } from '@/lib/date-utils'
 import { useCurrencyAmountsWithCurrency } from '@/hooks/use-currency-amount'
 import { format } from 'date-fns'
 
@@ -120,9 +121,11 @@ export function IncomeList({ incomeData: propIncomeData, refetch: propRefetch }:
             {incomeData.map((income, index) => (
               <TableRow key={income.id}>
                 <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    {format(new Date(income.date), 'MMM dd, yyyy')}
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      {formatTimestampForDisplay(income.date)}
+                    </div>
                   </div>
                 </TableCell>
                 <TableCell>

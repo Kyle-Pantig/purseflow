@@ -8,6 +8,7 @@ import { DollarSign, TrendingUp, Calendar, CreditCard, Wallet, TrendingDown } fr
 import { AddExpenseDialog } from './add-expense-dialog'
 import { formatCurrency } from '@/lib/currency'
 import { useCurrency } from '@/contexts/currency-context'
+import { formatDateForDisplay, formatTimestampForDisplay } from '@/lib/date-utils'
 import { useColor } from '@/contexts/color-context'
 import { useAuth } from '@/contexts/auth-context'
 import { useCurrencyAmountsWithCurrency, useCurrencyAmountWithCurrency } from '@/hooks/use-currency-amount'
@@ -858,9 +859,9 @@ export function DashboardContent() {
                     <p className="text-xs text-muted-foreground">
                       {expense.description || 'No description'}
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(expense.date).toLocaleDateString()}
-                    </p>
+                    <div className="text-xs text-muted-foreground">
+                      <div>{formatTimestampForDisplay(expense.date)}</div>
+                    </div>
                   </div>
                   <span className="text-sm font-bold">
                     {isConvertingExpenses ? <Skeleton className="h-4 w-16" /> : formatCurrency(convertedExpenseAmounts[index] || expense.amount, currency)}

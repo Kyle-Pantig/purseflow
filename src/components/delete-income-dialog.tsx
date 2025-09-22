@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button'
 import { AlertTriangle, Trash2 } from 'lucide-react'
 import { trpc } from '@/lib/trpc-client'
+import { formatDateForDisplay, formatTimestampForDisplay } from '@/lib/date-utils'
 
 interface Income {
   id: string
@@ -73,7 +74,9 @@ export function DeleteIncomeDialog({ open, onOpenChange, income, onSuccess }: De
               </div>
               <div className="flex justify-between">
                 <span className="font-medium">Date:</span>
-                <span>{new Date(income.date).toLocaleDateString()}</span>
+                <div className="text-right">
+                  <div>{formatTimestampForDisplay(income.date)}</div>
+                </div>
               </div>
               {income.description && (
                 <div className="flex justify-between">

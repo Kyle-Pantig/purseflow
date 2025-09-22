@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc'
 import { supabaseServer } from '@/lib/supabase-server'
+import { toLocalTimestampString } from '@/lib/date-utils'
 import { addMonths, addYears, endOfMonth } from 'date-fns'
 
 // Helper function to auto-generate due recurring income
@@ -63,8 +64,8 @@ async function generateDueRecurringIncome(userId: string, recurringIncome: Array
         .eq('type', income.type)
         .eq('amount', income.amount)
         .eq('is_recurring', true)
-        .gte('date', periodStart.toISOString().split('T')[0])
-        .lte('date', periodEnd.toISOString().split('T')[0])
+        .gte('date', periodStart.toISOString())
+        .lte('date', periodEnd.toISOString())
         .single()
 
       if (!existingEntry) {
@@ -76,7 +77,7 @@ async function generateDueRecurringIncome(userId: string, recurringIncome: Array
             amount: income.amount,
             type: income.type,
             description: income.description || `Recurring ${income.type}`,
-            date: nextDate.toISOString().split('T')[0],
+            date: nextDate.toISOString(),
             is_recurring: true,
             recurring_frequency: income.recurring_frequency,
             currency_code: income.currency_code,
@@ -153,8 +154,8 @@ export const incomeRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
-      const startDate = new Date(input.year, input.month - 1, 1).toISOString().split('T')[0]
-      const endDate = new Date(input.year, input.month, 0).toISOString().split('T')[0]
+      const startDate = new Date(input.year, input.month - 1, 1).toISOString()
+      const endDate = new Date(input.year, input.month, 0).toISOString()
       
       const { data, error } = await supabaseServer
         .from('income')
@@ -366,8 +367,8 @@ export const incomeRouter = createTRPCRouter({
             .eq('type', income.type)
             .eq('amount', income.amount)
             .eq('is_recurring', true)
-            .gte('date', periodStart.toISOString().split('T')[0])
-            .lte('date', periodEnd.toISOString().split('T')[0])
+            .gte('date', periodStart.toISOString())
+            .lte('date', periodEnd.toISOString())
             .single()
 
           if (!existingEntry) {
@@ -379,7 +380,7 @@ export const incomeRouter = createTRPCRouter({
                 amount: income.amount,
                 type: income.type,
                 description: income.description || `Recurring ${income.type}`,
-                date: nextDate.toISOString().split('T')[0],
+                date: nextDate.toISOString(),
                 is_recurring: true,
                 recurring_frequency: income.recurring_frequency,
                 currency_code: income.currency_code,
@@ -459,7 +460,7 @@ export const incomeRouter = createTRPCRouter({
 
         return {
           incomeId: income.id,
-          nextDate: nextDate.toISOString().split('T')[0],
+          nextDate: nextDate.toISOString(),
           isDue: today >= nextDate,
           frequency: income.recurring_frequency
         }

@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/table'
 import { formatCurrency } from '@/lib/currency'
 import { useCurrency } from '@/contexts/currency-context'
+import { formatDateForDisplay, formatTimestampForDisplay } from '@/lib/date-utils'
 import { useCurrencyAmountsWithCurrency } from '@/hooks/use-currency-amount'
 import { AddExpenseDialog } from './add-expense-dialog'
 import { DatePicker } from './date-picker'
@@ -366,9 +367,11 @@ export function ExpensesContent() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <span className="text-sm text-muted-foreground">
-                          {new Date(expense.date).toLocaleDateString()}
-                        </span>
+                        <div className="flex flex-col">
+                          <span className="text-sm text-muted-foreground">
+                            {formatTimestampForDisplay(expense.date)}
+                          </span>
+                        </div>
                       </TableCell>
                       <TableCell className="text-right">
                         <span className="text-sm font-bold">

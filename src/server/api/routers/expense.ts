@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc'
 import { supabaseServer } from '@/lib/supabase-server'
+import { getTodayLocalDateString, toLocalTimestampString } from '@/lib/date-utils'
 
 export const expenseRouter = createTRPCRouter({
   addExpense: protectedProcedure
@@ -70,14 +71,19 @@ export const expenseRouter = createTRPCRouter({
     }),
 
   getTodayExpenses: protectedProcedure.query(async ({ ctx }) => {
-    const today = new Date().toISOString().split('T')[0]
+    const today = new Date()
+    const startOfDay = new Date(today)
+    startOfDay.setHours(0, 0, 0, 0)
+    const endOfDay = new Date(today)
+    endOfDay.setHours(23, 59, 59, 999)
     
     const { data, error } = await supabaseServer
       .from('expenses')
       .select('*')
       .eq('user_id', ctx.session.user.id)
-      .eq('date', today)
-      .order('created_at', { ascending: false })
+      .gte('date', startOfDay.toISOString())
+      .lte('date', endOfDay.toISOString())
+      .order('date', { ascending: false })
 
     if (error) {
       throw new Error(error.message)
