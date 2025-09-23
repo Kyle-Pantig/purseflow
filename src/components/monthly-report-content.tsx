@@ -17,21 +17,13 @@ import {
 } from '@/components/ui/table'
 import { useCurrency } from '@/contexts/currency-context'
 import { useCurrencyAmountsWithCurrency } from '@/hooks/use-currency-amount'
+import { isThisMonth, timestampToLocalDateString, getDayBounds } from '@/lib/date-utils'
 import { formatCurrency } from '@/lib/currency'
 import { useColor } from '@/contexts/color-context'
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell } from 'recharts'
 import { ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { subMonths, format, startOfMonth, endOfMonth, eachMonthOfInterval } from 'date-fns'
-
-const categoryLabels = {
-  groceries: 'Groceries',
-  bills: 'Bills & Utilities',
-  travel: 'Travel',
-  shopping: 'Shopping',
-  utilities: 'Utilities',
-  food: 'Food & Dining',
-  others: 'Others'
-}
+import { getCategoryLabel } from '@/lib/categories'
 
 // Colors will be generated from user's color preferences
 
@@ -66,7 +58,11 @@ export function MonthlyReportContent() {
       
       const monthExpenses = allExpenses.filter((expense: { date: string }) => {
         const expenseDate = new Date(expense.date)
-        return expenseDate >= monthStart && expenseDate <= monthEnd
+        // Use local timezone comparison
+        const expenseDateOnly = new Date(expenseDate.getFullYear(), expenseDate.getMonth(), expenseDate.getDate())
+        const monthStartOnly = new Date(monthStart.getFullYear(), monthStart.getMonth(), monthStart.getDate())
+        const monthEndOnly = new Date(monthEnd.getFullYear(), monthEnd.getMonth(), monthEnd.getDate())
+        return expenseDateOnly >= monthStartOnly && expenseDateOnly <= monthEndOnly
       })
 
       // Find the corresponding converted amounts for this month's expenses
@@ -97,7 +93,7 @@ export function MonthlyReportContent() {
         monthShort: format(month, 'MMM'),
         amount: totalAmount,
         count: monthExpenses.length,
-        topCategory: categoryLabels[topCategory.category as keyof typeof categoryLabels] || topCategory.category,
+        topCategory: getCategoryLabel(topCategory.category),
         topCategoryAmount: topCategory.amount,
         dailyAverage: dailyAverage
       }
@@ -112,8 +108,7 @@ export function MonthlyReportContent() {
     const currentMonthEnd = endOfMonth(new Date())
     
     const currentMonthExpenses = allExpenses.filter((expense: { date: string }) => {
-      const expenseDate = new Date(expense.date)
-      return expenseDate >= currentMonthStart && expenseDate <= currentMonthEnd
+      return isThisMonth(expense.date)
     })
 
     const categoryTotals = currentMonthExpenses.reduce((acc: Record<string, number>, expense: { category: string; id: string }) => {
@@ -125,7 +120,7 @@ export function MonthlyReportContent() {
     const totalAmount = Object.values(categoryTotals).reduce((sum: number, amount: unknown) => sum + (amount as number), 0)
 
     return Object.entries(categoryTotals).map(([category, amount], index) => ({
-      category: categoryLabels[category as keyof typeof categoryLabels] || category,
+      category: getCategoryLabel(category),
       amount: amount,
       percentage: totalAmount > 0 ? (((amount as number) / totalAmount) * 100).toFixed(1) : 0,
       fill: colors[index % colors.length]
@@ -392,7 +387,16 @@ export function MonthlyReportContent() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="monthShort" />
                   <YAxis />
-                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <ChartTooltip 
+                    content={<ChartTooltipContent 
+                      formatter={(value) => [
+                        <div key="tooltip">
+                          <div>{formatCurrency(Number(value), currency)}</div>
+                        </div>
+                      ]}
+                      labelFormatter={(label) => `${label}`}
+                    />} 
+                  />
                   <Area
                     type="monotone"
                     dataKey="amount"
@@ -417,7 +421,17 @@ export function MonthlyReportContent() {
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <ChartTooltip 
+                    content={<ChartTooltipContent 
+                      formatter={(value, name) => [
+                        <div key="tooltip">
+                          <div>{name}</div>
+                          <div>{formatCurrency(Number(value), currency)}</div>
+                        </div>
+                      ]}
+                      labelFormatter={(label) => `${label}`}
+                    />} 
+                  />
                   <Pie 
                     data={currentMonthCategoryData} 
                     dataKey="amount" 

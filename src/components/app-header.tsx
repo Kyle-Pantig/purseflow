@@ -15,6 +15,7 @@ import { usePathname } from 'next/navigation'
 import { useAuth } from "@/contexts/auth-context"
 import { useColor } from "@/contexts/color-context"
 import { useRef } from "react"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   BadgeCheck,
   Settings,
@@ -91,7 +92,7 @@ const getBreadcrumbs = (pathname: string) => {
 export function AppHeader() {
   const pathname = usePathname()
   const breadcrumbs = getBreadcrumbs(pathname)
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const isMobile = useIsMobile()
   const { currency, setCurrency } = useCurrency()
@@ -159,12 +160,16 @@ export function AppHeader() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="flex items-center rounded-lg p-2 hover:bg-accent hover:text-accent-foreground transition-colors">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={userData.avatar} alt={userData.name} />
-                <AvatarFallback style={{ backgroundColor: avatarColor, color: 'white' }}>
-                  <UserCircle className="h-5 w-5" />
-                </AvatarFallback>
-              </Avatar>
+              {authLoading ? (
+                <Skeleton className="h-8 w-8 rounded-full" />
+              ) : (
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={userData.avatar} alt={userData.name} />
+                  <AvatarFallback style={{ backgroundColor: avatarColor, color: 'white' }}>
+                    <UserCircle className="h-5 w-5" />
+                  </AvatarFallback>
+                </Avatar>
+              )}
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -174,20 +179,32 @@ export function AppHeader() {
           >
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={userData.avatar} alt={userData.name} />
-                  <AvatarFallback style={{ backgroundColor: avatarColor, color: 'white' }}>
-                    <UserCircle className="h-5 w-5" />
-                  </AvatarFallback>
-                </Avatar>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate text-xs text-muted-foreground">{userData.email}</span>
-                  {isMobile && (
-                    <span className="truncate text-xs text-muted-foreground">
-                      {currency.symbol} {currency.code}
-                    </span>
-                  )}
-                </div>
+                {authLoading ? (
+                  <>
+                    <Skeleton className="h-8 w-8 rounded-full" />
+                    <div className="grid flex-1 text-left text-sm leading-tight space-y-1">
+                      <Skeleton className="h-3 w-24" />
+                      {isMobile && <Skeleton className="h-3 w-16" />}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={userData.avatar} alt={userData.name} />
+                      <AvatarFallback style={{ backgroundColor: avatarColor, color: 'white' }}>
+                        <UserCircle className="h-5 w-5" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="grid flex-1 text-left text-sm leading-tight">
+                      <span className="truncate text-xs text-muted-foreground">{userData.email}</span>
+                      {isMobile && (
+                        <span className="truncate text-xs text-muted-foreground">
+                          {currency.symbol} {currency.code}
+                        </span>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />

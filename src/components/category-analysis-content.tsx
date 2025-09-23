@@ -17,21 +17,13 @@ import {
 import { PieChart, BarChart3, TrendingUp, TrendingDown, Target, Award } from 'lucide-react'
 import { useCurrency } from '@/contexts/currency-context'
 import { useCurrencyAmountsWithCurrency } from '@/hooks/use-currency-amount'
+import { getDayBounds } from '@/lib/date-utils'
 import { formatCurrency } from '@/lib/currency'
 import { useColor } from '@/contexts/color-context'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, PieChart as RechartsPieChart, Pie, Cell, LineChart, Line } from 'recharts'
 import { ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { subMonths, format, startOfMonth, endOfMonth, eachMonthOfInterval } from 'date-fns'
-
-const categoryLabels = {
-  groceries: 'Groceries',
-  bills: 'Bills & Utilities',
-  travel: 'Travel',
-  shopping: 'Shopping',
-  utilities: 'Utilities',
-  food: 'Food & Dining',
-  others: 'Others'
-}
+import { CATEGORY_LABELS, getCategoryLabel, getCategoriesFromData } from '@/lib/categories'
 
 // Category colors will be generated from user's color preferences
 
@@ -81,7 +73,7 @@ export function CategoryAnalysisContent() {
     const totalAmount = (Object.values(categoryTotals) as number[]).reduce((sum: number, amount: number) => sum + amount, 0)
     
     return Object.entries(categoryTotals).map(([category, amount], index) => ({
-      category: categoryLabels[category as keyof typeof categoryLabels] || category,
+      category: getCategoryLabel(category),
       categoryKey: category,
       amount: amount as number,
       count: categoryCounts[category] || 0,
@@ -99,13 +91,20 @@ export function CategoryAnalysisContent() {
       end: new Date()
     })
 
+    // Get all unique categories from the data
+    const allCategories = getCategoriesFromData(allExpenses)
+
     return last6Months.map(month => {
       const monthStart = startOfMonth(month)
       const monthEnd = endOfMonth(month)
       
       const monthExpenses = allExpenses.filter((expense: { date: string }) => {
         const expenseDate = new Date(expense.date)
-        return expenseDate >= monthStart && expenseDate <= monthEnd
+        // Use local timezone comparison
+        const expenseDateOnly = new Date(expenseDate.getFullYear(), expenseDate.getMonth(), expenseDate.getDate())
+        const monthStartOnly = new Date(monthStart.getFullYear(), monthStart.getMonth(), monthStart.getDate())
+        const monthEndOnly = new Date(monthEnd.getFullYear(), monthEnd.getMonth(), monthEnd.getDate())
+        return expenseDateOnly >= monthStartOnly && expenseDateOnly <= monthEndOnly
       })
 
       const monthCategoryTotals = monthExpenses.reduce((acc: Record<string, number>, expense: { category: string; id: string }) => {
@@ -120,8 +119,8 @@ export function CategoryAnalysisContent() {
         monthShort: format(month, 'MMM')
       }
 
-      // Add each category's amount for this month
-      Object.keys(categoryLabels).forEach(category => {
+      // Add each category's amount for this month (including all categories found in data)
+      allCategories.forEach(category => {
         monthData[category] = monthCategoryTotals[category] || 0
       })
 
@@ -131,14 +130,17 @@ export function CategoryAnalysisContent() {
 
   // Calculate category growth rates
   const categoryGrowthRates = useMemo(() => {
-    if (monthlyCategoryTrends.length < 2) return {}
+    if (monthlyCategoryTrends.length < 2 || !allExpenses) return {}
     
     const currentMonth = monthlyCategoryTrends[monthlyCategoryTrends.length - 1]
     const previousMonth = monthlyCategoryTrends[monthlyCategoryTrends.length - 2]
     
     const growthRates: Record<string, number> = {}
     
-    Object.keys(categoryLabels).forEach(category => {
+    // Get all unique categories from the data
+    const allCategories = getCategoriesFromData(allExpenses)
+    
+    allCategories.forEach(category => {
       const current = (currentMonth[category] as number) || 0
       const previous = (previousMonth[category] as number) || 0
       
@@ -150,7 +152,7 @@ export function CategoryAnalysisContent() {
     })
     
     return growthRates
-  }, [monthlyCategoryTrends])
+  }, [monthlyCategoryTrends, allExpenses])
 
   // Calculate top performing categories
   const topCategories = useMemo(() => {
@@ -374,7 +376,17 @@ export function CategoryAnalysisContent() {
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <RechartsPieChart>
-                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <ChartTooltip 
+                    content={<ChartTooltipContent 
+                      formatter={(value, name) => [
+                        <div key="tooltip">
+                          <div>{name}</div>
+                          <div>{formatCurrency(Number(value), currency)}</div>
+                        </div>
+                      ]}
+                      labelFormatter={(label) => `${label}`}
+                    />} 
+                  />
                   <Pie 
                     data={categoryData} 
                     dataKey="amount" 
@@ -414,7 +426,16 @@ export function CategoryAnalysisContent() {
                     fontSize={12}
                   />
                   <YAxis />
-                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <ChartTooltip 
+                    content={<ChartTooltipContent 
+                      formatter={(value) => [
+                        <div key="tooltip">
+                          <div>{formatCurrency(Number(value), currency)}</div>
+                        </div>
+                      ]}
+                      labelFormatter={(label) => `${label}`}
+                    />} 
+                  />
                   <Bar dataKey="amount" radius={4}>
                     {categoryData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.fill} />
@@ -442,8 +463,17 @@ export function CategoryAnalysisContent() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="monthShort" />
                 <YAxis />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                {Object.keys(categoryLabels).map((category, index) => (
+                <ChartTooltip 
+                  content={<ChartTooltipContent 
+                    formatter={(value, name) => [
+                      <div key="tooltip">
+                        <div>{name}: {formatCurrency(Number(value), currency)}</div>
+                      </div>
+                    ]}
+                    labelFormatter={(label) => `${label}`}
+                  />} 
+                />
+                {getCategoriesFromData(allExpenses || []).map((category, index) => (
                   <Line
                     key={category}
                     type="monotone"

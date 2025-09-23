@@ -36,28 +36,17 @@ import { formatCurrency } from '@/lib/currency'
 import { useCurrency } from '@/contexts/currency-context'
 import { useCurrencyAmountsWithCurrency } from '@/hooks/use-currency-amount'
 import { useColor } from '@/contexts/color-context'
-
-const categoryLabels = {
-  transportation: 'Transportation',
-  food: 'Food & Dining',
-  groceries: 'Groceries',
-  bills: 'Bills & Utilities',
-  entertainment: 'Entertainment',
-  shopping: 'Shopping',
-  healthcare: 'Healthcare',
-  education: 'Education',
-  travel: 'Travel',
-  utilities: 'Utilities',
-  others: 'Others'
-}
+import { getCategoryLabel } from '@/lib/categories'
 
 // ChartRadarDots component
 function ChartRadarDots({ 
   data, 
-  colors
+  colors,
+  currency
 }: { 
   data: Array<{ category: string; amount: number; fill: string }>, 
-  colors: string[]
+  colors: string[],
+  currency: { code: string; symbol: string; name: string; locale: string }
 }) {
   const [isMounted, setIsMounted] = useState(false)
 
@@ -98,7 +87,17 @@ function ChartRadarDots({
           <div className="h-[250px]">
             <ResponsiveContainer width="100%" height="100%">
               <RadarChart data={data}>
-                <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+                <ChartTooltip 
+                  cursor={false} 
+                  content={<ChartTooltipContent 
+                    formatter={(value) => [
+                      <div key="tooltip">
+                        <div>{formatCurrency(Number(value), currency)}</div>
+                      </div>
+                    ]}
+                    labelFormatter={(label) => `${label}`}
+                  />} 
+                />
                 <PolarAngleAxis dataKey="category" />
                 <PolarGrid />
                 <Radar
@@ -177,7 +176,7 @@ export function CategoriesContent() {
 
   // Prepare data for charts
   const radarData = categoryData.map((item, index) => ({
-    category: categoryLabels[item.category as keyof typeof categoryLabels] || item.category,
+    category: getCategoryLabel(item.category),
     amount: convertedAmounts[index] || 0,
     fill: colors[index % colors.length]
   }))
@@ -185,7 +184,7 @@ export function CategoriesContent() {
   // Create chart configuration
 
   const barData = categoryData.map((item, index) => ({
-    category: categoryLabels[item.category as keyof typeof categoryLabels] || item.category,
+    category: getCategoryLabel(item.category),
     amount: convertedAmounts[index] || 0,
     count: item.count,
     fill: colors[index % colors.length]
@@ -284,7 +283,7 @@ export function CategoriesContent() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {categoryData[0] ? categoryLabels[categoryData[0].category as keyof typeof categoryLabels] : 'N/A'}
+              {categoryData[0] ? getCategoryLabel(categoryData[0].category) : 'N/A'}
             </div>
             <p className="text-xs text-muted-foreground">
               {categoryData[0] ? formatCurrency(convertedAmounts[0] || 0, currency) : 'No data'}
@@ -297,7 +296,8 @@ export function CategoriesContent() {
       <div className="grid gap-6 md:grid-cols-2">
         <ChartRadarDots 
           data={radarData} 
-          colors={colors} 
+          colors={colors}
+          currency={currency}
         />
 
         <Card>
@@ -320,7 +320,16 @@ export function CategoriesContent() {
                     fontSize={12}
                   />
                   <YAxis />
-                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <ChartTooltip 
+                    content={<ChartTooltipContent 
+                      formatter={(value) => [
+                        <div key="tooltip">
+                          <div>{formatCurrency(Number(value), currency)}</div>
+                        </div>
+                      ]}
+                      labelFormatter={(label) => `${label}`}
+                    />} 
+                  />
                   <Bar dataKey="amount">
                     {barData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.fill} />
@@ -360,7 +369,7 @@ export function CategoriesContent() {
                 return (
                   <TableRow key={item.category}>
                     <TableCell className="font-medium">
-                      {categoryLabels[item.category as keyof typeof categoryLabels] || item.category}
+                      {getCategoryLabel(item.category)}
                     </TableCell>
                     <TableCell className="text-right font-bold">
                       {formatCurrency(convertedAmount, currency)}

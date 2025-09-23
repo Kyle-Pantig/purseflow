@@ -105,3 +105,65 @@ export function formatTimestampDateForDisplay(timestamp: string): string {
     day: 'numeric'
   })
 }
+
+/**
+ * Gets the start of the current week (Sunday) in local timezone
+ */
+export function getStartOfWeek(): Date {
+  const now = new Date()
+  const start = new Date(now)
+  start.setDate(now.getDate() - now.getDay())
+  start.setHours(0, 0, 0, 0)
+  return start
+}
+
+/**
+ * Gets the start of the current month in local timezone
+ */
+export function getStartOfMonth(): Date {
+  const now = new Date()
+  return new Date(now.getFullYear(), now.getMonth(), 1)
+}
+
+/**
+ * Gets the start of the current year in local timezone
+ */
+export function getStartOfYear(): Date {
+  const now = new Date()
+  return new Date(now.getFullYear(), 0, 1)
+}
+
+/**
+ * Checks if a timestamp is within the current week
+ */
+export function isThisWeek(timestamp: string): boolean {
+  const expenseDate = new Date(timestamp)
+  const startOfWeek = getStartOfWeek()
+  return expenseDate >= startOfWeek
+}
+
+/**
+ * Checks if a timestamp is within the current month
+ */
+export function isThisMonth(timestamp: string): boolean {
+  const expenseDate = new Date(timestamp)
+  const startOfMonth = getStartOfMonth()
+  return expenseDate >= startOfMonth
+}
+
+/**
+ * Checks if a timestamp is within the current year
+ */
+export function isThisYear(timestamp: string): boolean {
+  const expenseDate = new Date(timestamp)
+  const currentYear = new Date().getFullYear()
+  return expenseDate.getFullYear() === currentYear
+}
+
+/**
+ * Converts a timestamp to local date string for comparison
+ */
+export function timestampToLocalDateString(timestamp: string): string {
+  const date = new Date(timestamp)
+  return toLocalDateString(date)
+}

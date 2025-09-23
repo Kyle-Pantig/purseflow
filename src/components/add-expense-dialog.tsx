@@ -106,11 +106,24 @@ export function AddExpenseDialog({ open: externalOpen, onOpenChange }: AddExpens
         return
       }
       
+      // Create a new date with the selected date but current time
+      const selectedDate = date || new Date()
+      const currentTime = new Date()
+      const finalDate = new Date(
+        selectedDate.getFullYear(),
+        selectedDate.getMonth(),
+        selectedDate.getDate(),
+        currentTime.getHours(),
+        currentTime.getMinutes(),
+        currentTime.getSeconds(),
+        currentTime.getMilliseconds()
+      )
+
       addExpenseMutation.mutate({
         amount: parsedAmount,
         category: category as 'transportation' | 'food' | 'bills' | 'entertainment' | 'shopping' | 'healthcare' | 'education' | 'travel' | 'groceries' | 'utilities' | 'others',
         description: description || undefined,
-        date: date ? toLocalTimestampString(date) : toLocalTimestampString(new Date()),
+        date: toLocalTimestampString(finalDate),
         currency_code: currency.code, // Store the currency the user entered
       })
     } catch (error) {

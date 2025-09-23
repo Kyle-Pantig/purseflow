@@ -27,8 +27,10 @@ import { useCurrency } from '@/contexts/currency-context'
 import { formatDateForDisplay, formatTimestampForDisplay } from '@/lib/date-utils'
 import { useCurrencyAmountsWithCurrency } from '@/hooks/use-currency-amount'
 import { AddExpenseDialog } from './add-expense-dialog'
+import { DeleteExpenseDialog } from './delete-expense-dialog'
 import { DatePicker } from './date-picker'
-import { Search, Filter, Calendar, DollarSign } from 'lucide-react'
+import { Search, Filter, Calendar, DollarSign, Edit2, Check, X, Trash2 } from 'lucide-react'
+import { getCategoryLabel } from '@/lib/categories'
 
 const categories = [
   { value: 'all', label: 'All Categories' },
@@ -45,28 +47,48 @@ const categories = [
   { value: 'others', label: 'Others' },
 ]
 
-const categoryLabels = {
-  transportation: 'Transportation',
-  food: 'Food & Dining',
-  groceries: 'Groceries',
-  bills: 'Bills & Utilities',
-  entertainment: 'Entertainment',
-  shopping: 'Shopping',
-  healthcare: 'Healthcare',
-  education: 'Education',
-  travel: 'Travel',
-  utilities: 'Utilities',
-  others: 'Others'
-}
-
 export function ExpensesContent() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
   const [displayLimit, setDisplayLimit] = useState(10)
   
+  // Inline editing state
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState({
+    amount: '',
+    category: '',
+    description: '',
+    date: new Date()
+  })
+
+  // Delete dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [expenseToDelete, setExpenseToDelete] = useState<any>(null)
+  
   const { currency } = useCurrency()
   const { data: expenses, isLoading, error } = trpc.expense.getRecentExpenses.useQuery({ limit: 100 })
+  const utils = trpc.useUtils()
+
+  // Update expense mutation
+  const updateExpenseMutation = trpc.expense.updateExpense.useMutation({
+    onSuccess: () => {
+      setEditingId(null)
+      setEditForm({ amount: '', category: '', description: '', date: new Date() })
+      utils.expense.getRecentExpenses.invalidate()
+      utils.expense.getAllExpenses.invalidate()
+      utils.expense.getTodayExpenses.invalidate()
+    },
+    onError: (error) => {
+      console.error('Error updating expense:', error)
+    }
+  })
+
+  // Delete expense function
+  const handleDeleteClick = (expense: any) => {
+    setExpenseToDelete(expense)
+    setDeleteDialogOpen(true)
+  }
 
   // Filter expenses based on search and category
   const allFilteredExpenses = expenses?.filter(expense => {
@@ -93,17 +115,65 @@ export function ExpensesContent() {
     setDisplayLimit(prev => prev + 10)
   }
 
+  // Inline editing functions
+  const startEdit = (expense: any) => {
+    setEditingId(expense.id)
+    setEditForm({
+      amount: expense.amount.toString(),
+      category: expense.category,
+      description: expense.description || '',
+      date: new Date(expense.date)
+    })
+  }
+
+  const cancelEdit = () => {
+    setEditingId(null)
+    setEditForm({ amount: '', category: '', description: '', date: new Date() })
+  }
+
+  const saveEdit = () => {
+    if (!editingId) return
+
+    const parsedAmount = parseFloat(editForm.amount)
+    if (isNaN(parsedAmount) || parsedAmount <= 0) return
+
+    updateExpenseMutation.mutate({
+      id: editingId,
+      amount: parsedAmount,
+      category: editForm.category as any,
+      description: editForm.description || undefined,
+      date: editForm.date.toISOString(),
+    })
+  }
+
+
   // Reset display limit when filters change
   React.useEffect(() => {
     setDisplayLimit(10)
   }, [searchTerm, selectedCategory, selectedDate])
 
   // Convert amounts for display (only for displayed expenses)
-  const expenseData = filteredExpenses.map(expense => ({
-    amount: expense.amount,
-    currency_code: expense.currency_code || 'PHP'
-  }))
-  const { convertedAmounts: convertedAmounts, isLoading: isConverting } = useCurrencyAmountsWithCurrency(expenseData)
+  const expenseData = React.useMemo(() => 
+    filteredExpenses.map(expense => ({
+      amount: expense.amount,
+      currency_code: expense.currency_code || 'PHP'
+    })), [filteredExpenses]
+  )
+  
+  const { convertedAmounts, isLoading: isConverting } = useCurrencyAmountsWithCurrency(expenseData)
+
+  // Create a map of expense ID to converted amount for reliable lookup
+  const expenseAmountMap = React.useMemo(() => {
+    const map = new Map()
+    filteredExpenses.forEach((expense, index) => {
+      // Use converted amount if available, otherwise fall back to original amount
+      const convertedAmount = convertedAmounts && convertedAmounts[index] !== undefined 
+        ? convertedAmounts[index] 
+        : expense.amount
+      map.set(expense.id, convertedAmount)
+    })
+    return map
+  }, [filteredExpenses, convertedAmounts])
 
   // Convert amounts for all filtered expenses for totals
   const allExpenseData = allFilteredExpenses.map(expense => ({
@@ -233,7 +303,7 @@ export function ExpensesContent() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {isConverting ? <Skeleton className="h-8 w-20" /> : formatCurrency(totalAmount, currency)}
+              {formatCurrency(totalAmount, currency)}
             </div>
             <p className="text-xs text-muted-foreground">
               {totalExpenses} expenses
@@ -248,7 +318,7 @@ export function ExpensesContent() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {isConverting ? <Skeleton className="h-8 w-20" /> : formatCurrency(totalExpenses > 0 ? totalAmount / totalExpenses : 0, currency)}
+              {formatCurrency(totalExpenses > 0 ? totalAmount / totalExpenses : 0, currency)}
             </div>
             <p className="text-xs text-muted-foreground">
               Per transaction
@@ -348,39 +418,136 @@ export function ExpensesContent() {
                     <TableHead>Category</TableHead>
                     <TableHead>Description</TableHead>
                     <TableHead>Date</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead className="text-right w-[120px]">Amount</TableHead>
+                    <TableHead className="w-[120px] text-center">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredExpenses.map((expense, index) => (
                     <TableRow key={expense.id}>
                       <TableCell>
-                        <Badge variant="secondary">
-                          {categoryLabels[expense.category as keyof typeof categoryLabels]}
-                        </Badge>
+                        {editingId === expense.id ? (
+                          <Select
+                            value={editForm.category}
+                            onValueChange={(value) => setEditForm(prev => ({ ...prev, category: value }))}
+                          >
+                            <SelectTrigger className="w-[140px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {categories.slice(1).map((cat) => (
+                                <SelectItem key={cat.value} value={cat.value}>
+                                  {cat.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Badge variant="secondary">
+                            {getCategoryLabel(expense.category)}
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell>
-                        <div className="max-w-[200px]">
-                          <p className="text-sm font-medium truncate">
-                            {expense.description || '-'}
-                          </p>
-                        </div>
+                        {editingId === expense.id ? (
+                          <Input
+                            value={editForm.description}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
+                            placeholder="Enter description"
+                            className="max-w-[200px]"
+                          />
+                        ) : (
+                          <div className="max-w-[200px]">
+                            <p className="text-sm font-medium truncate">
+                              {expense.description || '-'}
+                            </p>
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-col">
-                          <span className="text-sm text-muted-foreground">
-                            {formatTimestampForDisplay(expense.date)}
-                          </span>
-                        </div>
+                        {editingId === expense.id ? (
+                          <DatePicker
+                            value={editForm.date}
+                            onChange={(date) => setEditForm(prev => ({ ...prev, date: date || new Date() }))}
+                            placeholder="Select date"
+                          />
+                        ) : (
+                          <div className="flex flex-col">
+                            <span className="text-sm text-muted-foreground">
+                              {formatTimestampForDisplay(expense.date)}
+                            </span>
+                          </div>
+                        )}
                       </TableCell>
-                      <TableCell className="text-right">
-                        <span className="text-sm font-bold">
-                          {isConverting ? (
-                            <Skeleton className="h-4 w-16" />
-                          ) : (
-                            formatCurrency(Number(convertedAmounts[index]) || expense.amount, currency)
-                          )}
-                        </span>
+                      <TableCell className="text-right w-[120px] pr-6">
+                        {editingId === expense.id ? (
+                          <div className="flex justify-end">
+                            <Input
+                              type="number"
+                              value={editForm.amount}
+                              onChange={(e) => setEditForm(prev => ({ ...prev, amount: e.target.value }))}
+                              placeholder="0.00"
+                              className="w-[100px] text-right"
+                              step="0.01"
+                              min="0"
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex justify-end">
+                            <span className="text-sm font-bold">
+                              {isConverting ? (
+                                <Skeleton className="h-4 w-16" />
+                              ) : (
+                                formatCurrency(
+                                  Number(expenseAmountMap.get(expense.id)) || expense.amount, 
+                                  currency
+                                )
+                              )}
+                            </span>
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center pl-4">
+                        {editingId === expense.id ? (
+                          <div className="flex gap-1 justify-center">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={saveEdit}
+                              disabled={updateExpenseMutation.isPending}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Check className="h-4 w-4 text-green-600" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={cancelEdit}
+                              className="h-8 w-8 p-0"
+                            >
+                              <X className="h-4 w-4 text-red-600" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex gap-1 justify-center">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => startEdit(expense)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleDeleteClick(expense)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Trash2 className="h-4 w-4 text-red-600" />
+                            </Button>
+                          </div>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -397,6 +564,16 @@ export function ExpensesContent() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteExpenseDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        expense={expenseToDelete}
+        onSuccess={() => {
+          setExpenseToDelete(null)
+        }}
+      />
     </div>
   )
 }

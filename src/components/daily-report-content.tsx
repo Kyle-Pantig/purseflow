@@ -17,21 +17,13 @@ import {
 } from '@/components/ui/table'
 import { useCurrency } from '@/contexts/currency-context'
 import { useColor } from '@/contexts/color-context'
+import { isToday, timestampToLocalDateString, getDayBounds } from '@/lib/date-utils'
 import { useCurrencyAmountsWithCurrency } from '@/hooks/use-currency-amount'
 import { formatCurrency } from '@/lib/currency'
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell } from 'recharts'
 import { ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { subDays, format, startOfDay, endOfDay, eachDayOfInterval } from 'date-fns'
-
-const categoryLabels = {
-  groceries: 'Groceries',
-  bills: 'Bills & Utilities',
-  travel: 'Travel',
-  shopping: 'Shopping',
-  utilities: 'Utilities',
-  food: 'Food & Dining',
-  others: 'Others'
-}
+import { getCategoryLabel } from '@/lib/categories'
 
 export function DailyReportContent() {
   const [displayLimit, setDisplayLimit] = useState(10)
@@ -43,7 +35,17 @@ export function DailyReportContent() {
   
   // Get today's expenses
   const today = useMemo(() => new Date(), [])
-  const { data: todayExpenses, isLoading: todayLoading, error: todayError } = trpc.expense.getTodayExpenses.useQuery()
+  const { data: allExpensesForToday, isLoading: todayLoading, error: todayError } = trpc.expense.getTodayExpenses.useQuery()
+  
+  // Filter today's expenses using date-utils for proper timezone handling
+  const todayExpenses = useMemo(() => {
+    if (!allExpensesForToday) return []
+    
+    return allExpensesForToday.filter(expense => {
+      const expenseDateString = timestampToLocalDateString(expense.date)
+      return isToday(expenseDateString)
+    })
+  }, [allExpensesForToday])
 
   // Prepare data for currency conversion
   const allExpensesForConversion = allExpenses?.map((expense: { amount: number; currency_code?: string }) => ({
@@ -69,8 +71,8 @@ export function DailyReportContent() {
     })
 
     return last30Days.map((day) => {
-      const dayStart = startOfDay(day)
-      const dayEnd = endOfDay(day)
+      // Use local timezone day bounds instead of UTC
+      const { start: dayStart, end: dayEnd } = getDayBounds(day)
       
       const dayExpenses = allExpenses.filter((expense: { date: string }) => {
         const expenseDate = new Date(expense.date)
@@ -110,7 +112,7 @@ export function DailyReportContent() {
     const totalAmount = (Object.values(categoryTotals) as number[]).reduce((sum: number, amount: number) => sum + amount, 0)
 
     return Object.entries(categoryTotals).map(([category, amount], index) => ({
-      category: categoryLabels[category as keyof typeof categoryLabels] || category,
+      category: getCategoryLabel(category),
       amount: amount as number,
       percentage: totalAmount > 0 ? (((amount as number) / totalAmount) * 100).toFixed(1) : 0,
       fill: colors[index % colors.length]
@@ -354,7 +356,16 @@ export function DailyReportContent() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis />
-                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <ChartTooltip 
+                    content={<ChartTooltipContent 
+                      formatter={(value) => [
+                        <div key="tooltip">
+                          <div>{formatCurrency(Number(value), currency)}</div>
+                        </div>
+                      ]}
+                      labelFormatter={(label) => `${label}`}
+                    />} 
+                  />
                   <Area
                     type="monotone"
                     dataKey="amount"
@@ -379,7 +390,17 @@ export function DailyReportContent() {
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <ChartTooltip 
+                    content={<ChartTooltipContent 
+                      formatter={(value, name) => [
+                        <div key="tooltip">
+                          <div>{name}</div>
+                          <div>{formatCurrency(Number(value), currency)}</div>
+                        </div>
+                      ]}
+                      labelFormatter={(label) => `${label}`}
+                    />} 
+                  />
                   <Pie 
                     data={todayCategoryData} 
                     dataKey="amount" 

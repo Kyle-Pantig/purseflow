@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useCurrencyConversion } from '@/contexts/currency-conversion-context'
 import { useCurrency } from '@/contexts/currency-context'
 
@@ -137,11 +137,15 @@ export function useCurrencyAmountsWithCurrency(expenses: Array<{ amount: number;
 
   // Create a stable reference for expenses to prevent infinite loops
   const expensesRef = useRef(expenses)
-  const [expensesLength, setExpensesLength] = useState(expenses.length)
+  
+  // Create a unique key that changes when any expense data changes
+  const expensesKey = useMemo(() => 
+    expenses.map(e => `${e.amount}-${e.currency_code}`).join('|'),
+    [expenses]
+  )
   
   useEffect(() => {
     expensesRef.current = expenses
-    setExpensesLength(expenses.length)
   }, [expenses])
 
   useEffect(() => {
@@ -186,7 +190,7 @@ export function useCurrencyAmountsWithCurrency(expenses: Array<{ amount: number;
     return () => {
       isMounted = false
     }
-  }, [convertAmountFromCurrency, currency.code, expensesLength]) // Add expensesLength to trigger conversion when data changes
+  }, [convertAmountFromCurrency, currency.code, expensesKey]) // Use expensesKey instead of expensesLength
 
   return {
     convertedAmounts,

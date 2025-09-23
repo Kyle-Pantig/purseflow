@@ -71,18 +71,12 @@ export const expenseRouter = createTRPCRouter({
     }),
 
   getTodayExpenses: protectedProcedure.query(async ({ ctx }) => {
-    const today = new Date()
-    const startOfDay = new Date(today)
-    startOfDay.setHours(0, 0, 0, 0)
-    const endOfDay = new Date(today)
-    endOfDay.setHours(23, 59, 59, 999)
-    
+    // Get all expenses and let the client filter by today
+    // This avoids timezone issues on the server side
     const { data, error } = await supabaseServer
       .from('expenses')
       .select('*')
       .eq('user_id', ctx.session.user.id)
-      .gte('date', startOfDay.toISOString())
-      .lte('date', endOfDay.toISOString())
       .order('date', { ascending: false })
 
     if (error) {
@@ -168,6 +162,47 @@ export const expenseRouter = createTRPCRouter({
         })),
         expenses: data,
       }
+    }),
+
+  updateExpense: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        amount: z.number().positive().optional(),
+        category: z.enum([
+          'transportation', 
+          'food', 
+          'bills', 
+          'entertainment',
+          'shopping',
+          'healthcare',
+          'education',
+          'travel',
+          'groceries',
+          'utilities',
+          'others'
+        ]).optional(),
+        description: z.string().optional(),
+        date: z.string().optional(),
+        currency_code: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { id, ...updateData } = input
+      
+      const { data, error } = await supabaseServer
+        .from('expenses')
+        .update(updateData)
+        .eq('id', id)
+        .eq('user_id', ctx.session.user.id)
+        .select()
+        .single()
+
+      if (error) {
+        throw new Error(error.message)
+      }
+
+      return data
     }),
 
   deleteExpense: protectedProcedure

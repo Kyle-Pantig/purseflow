@@ -1,14 +1,17 @@
 'use client'
 
 import { useMemo, useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { trpc } from '@/lib/trpc-client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { DollarSign, TrendingUp, Calendar, CreditCard, Wallet, TrendingDown } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { DollarSign, TrendingUp, Calendar, CreditCard, Wallet, TrendingDown, ArrowRight, Info } from 'lucide-react'
 import { AddExpenseDialog } from './add-expense-dialog'
 import { formatCurrency } from '@/lib/currency'
 import { useCurrency } from '@/contexts/currency-context'
-import { formatDateForDisplay, formatTimestampForDisplay } from '@/lib/date-utils'
+import { formatDateForDisplay, formatTimestampForDisplay, isToday, isThisWeek, isThisMonth, isThisYear, timestampToLocalDateString } from '@/lib/date-utils'
 import { useColor } from '@/contexts/color-context'
 import { useAuth } from '@/contexts/auth-context'
 import { useCurrencyAmountsWithCurrency, useCurrencyAmountWithCurrency } from '@/hooks/use-currency-amount'
@@ -17,26 +20,24 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart"
 import { Area, AreaChart, Bar, BarChart, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Cell } from 'recharts'
-
-const categoryLabels = {
-  transportation: 'Transportation',
-  food: 'Food & Dining',
-  groceries: 'Groceries',
-  bills: 'Bills & Utilities',
-  entertainment: 'Entertainment',
-  shopping: 'Shopping',
-  healthcare: 'Healthcare',
-  education: 'Education',
-  travel: 'Travel',
-  utilities: 'Utilities',
-  others: 'Others'
-}
+import { getCategoryLabel } from '@/lib/categories'
 
 export function DashboardContent() {
   const [isMounted, setIsMounted] = useState(false)
+  const router = useRouter()
   const { user } = useAuth()
   const { data: recentExpenses, isLoading: recentLoading, error: recentError } = trpc.expense.getRecentExpenses.useQuery({ limit: 5 })
-  const { data: todayExpenses, isLoading: todayLoading, error: todayError } = trpc.expense.getTodayExpenses.useQuery()
+  const { data: allExpensesForToday, isLoading: todayLoading, error: todayError } = trpc.expense.getTodayExpenses.useQuery()
+  
+  // Filter today's expenses using date-utils for proper timezone handling
+  const todayExpenses = useMemo(() => {
+    if (!allExpensesForToday) return []
+    
+    return allExpensesForToday.filter(expense => {
+      const expenseDateString = timestampToLocalDateString(expense.date)
+      return isToday(expenseDateString)
+    })
+  }, [allExpensesForToday])
   const { data: preferences, isLoading: preferencesLoading } = trpc.user.getPreferences.useQuery(
     undefined,
     {
@@ -63,40 +64,22 @@ export function DashboardContent() {
   }, [])
   
   
-  // Calculate weekly and monthly totals from all recent expenses
-  const now = useMemo(() => new Date(), [])
-  const startOfWeek = useMemo(() => {
-    const start = new Date(now)
-    start.setDate(now.getDate() - now.getDay())
-    start.setHours(0, 0, 0, 0) // Set to start of day
-    return start
-  }, [now])
-  const startOfMonth = useMemo(() => new Date(now.getFullYear(), now.getMonth(), 1), [now])
-  
-  // Get all expenses for weekly and monthly calculations
+  // Get all expenses for weekly, monthly, and yearly calculations
   const { data: allExpenses, isLoading: allLoading, error: allError } = trpc.expense.getAllExpenses.useQuery()
   
+  // Filter expenses using date-utils for proper timezone handling
   const weeklyExpenses = useMemo(() => 
-    allExpenses?.filter(expense => {
-      const expenseDate = new Date(expense.date)
-      return expenseDate >= startOfWeek
-    }) || [], 
-    [allExpenses, startOfWeek]
+    allExpenses?.filter(expense => isThisWeek(expense.date)) || [], 
+    [allExpenses]
   )
   
   const monthlyExpenses = useMemo(() => 
-    allExpenses?.filter(expense => {
-      const expenseDate = new Date(expense.date)
-      return expenseDate >= startOfMonth
-    }) || [], 
-    [allExpenses, startOfMonth]
+    allExpenses?.filter(expense => isThisMonth(expense.date)) || [], 
+    [allExpenses]
   )
   
   const yearlyExpenses = useMemo(() => 
-    allExpenses?.filter(expense => {
-      const expenseDate = new Date(expense.date)
-      return expenseDate.getFullYear() === new Date().getFullYear()
-    }) || [], 
+    allExpenses?.filter(expense => isThisYear(expense.date)) || [], 
     [allExpenses]
   )
   
@@ -222,6 +205,17 @@ export function DashboardContent() {
     }, {} as Record<string, number>) || {}
   }, [todayExpenses, convertedTodayAmounts])
 
+  // Convert all expenses for charts
+  const allExpensesData = useMemo(() => 
+    allExpenses?.map(expense => ({
+      amount: expense.amount,
+      currency_code: expense.currency_code || 'PHP'
+    })) || [], 
+    [allExpenses]
+  )
+  
+  const { convertedAmounts: allConvertedAmounts } = useCurrencyAmountsWithCurrency(allExpensesData)
+
   // Prepare data for charts
   const weeklyChartData = useMemo(() => {
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -239,18 +233,27 @@ export function DashboardContent() {
         return expenseDate.toDateString() === dayDate.toDateString()
       }) || []
       
-      
-      // For simplicity, we'll use the original amounts for the chart
-      // In a real app, you'd want to convert these too
-      const totalAmount = dayExpenses.reduce((sum, expense) => sum + expense.amount, 0)
+      // Use converted amounts
+      let totalAmount = 0
+      if (allConvertedAmounts && allExpenses) {
+        dayExpenses.forEach(dayExpense => {
+          const expenseIndex = allExpenses.findIndex(exp => exp.id === dayExpense.id)
+          if (expenseIndex !== -1 && allConvertedAmounts[expenseIndex]) {
+            totalAmount += allConvertedAmounts[expenseIndex]
+          }
+        })
+      } else {
+        // Fallback to original amounts
+        totalAmount = dayExpenses.reduce((sum, expense) => sum + expense.amount, 0)
+      }
       
       return {
         day,
-        amount: totalAmount,
+        amount: Math.round(totalAmount * 100) / 100,
         date: dayDate.toISOString().split('T')[0]
       }
     })
-  }, [allExpenses])
+  }, [allExpenses, allConvertedAmounts])
 
   const yearlyChartData = useMemo(() => {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -262,30 +265,43 @@ export function DashboardContent() {
         return expenseDate.getFullYear() === currentYear && expenseDate.getMonth() === index
       }) || []
       
-      const totalAmount = monthExpenses.reduce((sum, expense) => sum + expense.amount, 0)
+      // Use converted amounts
+      let totalAmount = 0
+      if (allConvertedAmounts && allExpenses) {
+        monthExpenses.forEach(monthExpense => {
+          const expenseIndex = allExpenses.findIndex(exp => exp.id === monthExpense.id)
+          if (expenseIndex !== -1 && allConvertedAmounts[expenseIndex]) {
+            totalAmount += allConvertedAmounts[expenseIndex]
+          }
+        })
+      } else {
+        // Fallback to original amounts
+        totalAmount = monthExpenses.reduce((sum, expense) => sum + expense.amount, 0)
+      }
       
       return {
         month,
-        amount: totalAmount,
+        amount: Math.round(totalAmount * 100) / 100,
         monthIndex: index
       }
     })
-  }, [allExpenses])
+  }, [allExpenses, allConvertedAmounts])
 
   const categoryChartData = useMemo(() => {
     if (!allExpenses) return []
     
-    const categoryTotals = allExpenses.reduce((acc, expense) => {
-      acc[expense.category] = (acc[expense.category] || 0) + expense.amount
+    const categoryTotals = allExpenses.reduce((acc, expense, index) => {
+      const convertedAmount = allConvertedAmounts?.[index] || expense.amount
+      acc[expense.category] = (acc[expense.category] || 0) + convertedAmount
       return acc
     }, {} as Record<string, number>)
     
     return Object.entries(categoryTotals).map(([category, amount], index) => ({
-      category: categoryLabels[category as keyof typeof categoryLabels] || category,
-      amount: amount,
+      category: getCategoryLabel(category),
+      amount: Math.round((amount as number) * 100) / 100,
       fill: colors[index % colors.length]
     }))
-  }, [allExpenses, colors])
+  }, [allExpenses, allConvertedAmounts, colors])
 
 
 
@@ -449,7 +465,8 @@ export function DashboardContent() {
 
 
   return (
-    <div className="space-y-6">
+    <TooltipProvider>
+      <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
@@ -478,7 +495,19 @@ export function DashboardContent() {
       <div className={`grid gap-4 ${getResponsiveGridCols()}`}>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Today&apos;s Total</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-sm font-medium">Today&apos;s Total</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Expenses from today ({new Date().toLocaleDateString('en-US', { 
+                    month: 'short' 
+                  })} {new Date().getDate()})</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -510,7 +539,19 @@ export function DashboardContent() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Monthly Expenses</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-sm font-medium">Monthly Expenses</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Expenses from this month ({new Date().toLocaleDateString('en-US', { 
+                    month: 'short' 
+                  })} 1 - {new Date().getDate()})</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <CreditCard className="h-4 w-4" style={{ color: colors[5] }} />
           </CardHeader>
           <CardContent>
@@ -546,7 +587,25 @@ export function DashboardContent() {
 
         <Card className="col-span-2 lg:col-span-4 xl:col-span-1">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">This Week</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-sm font-medium">This Week</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Expenses from this week ({(() => {
+                    const today = new Date()
+                    const startOfWeek = new Date(today)
+                    startOfWeek.setDate(today.getDate() - today.getDay())
+                    const endOfWeek = new Date(startOfWeek)
+                    endOfWeek.setDate(startOfWeek.getDate() + 6)
+                    const month = today.toLocaleDateString('en-US', { month: 'short' })
+                    return `${month} ${startOfWeek.getDate()}-${endOfWeek.getDate()}`
+                  })()})</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -703,7 +762,16 @@ export function DashboardContent() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="day" />
                     <YAxis />
-                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <ChartTooltip 
+                      content={<ChartTooltipContent 
+                        formatter={(value) => [
+                          <div key="tooltip">
+                            <div>{formatCurrency(Number(value), currency)}</div>
+                          </div>
+                        ]}
+                        labelFormatter={(label) => `${label}`}
+                      />} 
+                    />
                     <Area
                       type="monotone"
                       dataKey="amount"
@@ -751,7 +819,16 @@ export function DashboardContent() {
                       fontSize={12}
                     />
                     <YAxis />
-                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <ChartTooltip 
+                      content={<ChartTooltipContent 
+                        formatter={(value) => [
+                          <div key="tooltip">
+                            <div>{formatCurrency(Number(value), currency)}</div>
+                          </div>
+                        ]}
+                        labelFormatter={(label) => `${label}`}
+                      />} 
+                    />
                     <Bar dataKey="amount" fillOpacity={1} radius={4}>
                       {categoryChartData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.fill} />
@@ -794,7 +871,16 @@ export function DashboardContent() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
                   <YAxis />
-                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <ChartTooltip 
+                    content={<ChartTooltipContent 
+                      formatter={(value) => [
+                        <div key="tooltip">
+                          <div>{formatCurrency(Number(value), currency)}</div>
+                        </div>
+                      ]}
+                      labelFormatter={(label) => `${label}`}
+                    />} 
+                  />
                   <Area
                     type="monotone"
                     dataKey="amount"
@@ -824,7 +910,7 @@ export function DashboardContent() {
                 <div key={category} className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <span className="text-sm font-medium capitalize">
-                      {categoryLabels[category as keyof typeof categoryLabels]}
+                      {getCategoryLabel(category)}
                     </span>
                   </div>
                   <span className="text-sm font-bold">
@@ -843,10 +929,23 @@ export function DashboardContent() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Recent Transactions</CardTitle>
-            <CardDescription>
-              Latest expense entries
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Recent Transactions</CardTitle>
+                <CardDescription>
+                  Latest expense entries
+                </CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push('/expenses')}
+                className="flex items-center gap-2"
+              >
+                View All
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -854,7 +953,7 @@ export function DashboardContent() {
                 <div key={expense.id} className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium capitalize">
-                      {categoryLabels[expense.category as keyof typeof categoryLabels]}
+                      {getCategoryLabel(expense.category)}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {expense.description || 'No description'}
@@ -878,5 +977,6 @@ export function DashboardContent() {
         </Card>
       </div>
     </div>
+    </TooltipProvider>
   )
 }

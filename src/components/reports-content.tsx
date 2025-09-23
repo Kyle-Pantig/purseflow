@@ -28,6 +28,7 @@ import { useColor } from '@/contexts/color-context'
 import { formatCurrency } from '@/lib/currency'
 import { useCurrencyAmountsWithCurrency } from '@/hooks/use-currency-amount'
 import { DatePicker } from '@/components/date-picker'
+import { getCategoryLabel } from '@/lib/categories'
 
 export function ReportsContent() {
   const [period, setPeriod] = useState<'week' | 'month'>('week')
@@ -47,6 +48,10 @@ export function ReportsContent() {
       start.setMonth(now.getMonth() - 1)
     }
     
+    // Set time to start/end of day for proper timestamp filtering
+    start.setHours(0, 0, 0, 0)
+    now.setHours(23, 59, 59, 999)
+    
     return {
       start: start,
       end: now
@@ -58,8 +63,8 @@ export function ReportsContent() {
     const range = getDateRange(period)
     return {
       period,
-      startDate: (startDate || range.start).toISOString().split('T')[0],
-      endDate: (endDate || range.end).toISOString().split('T')[0],
+      startDate: (startDate || range.start).toISOString(),
+      endDate: (endDate || range.end).toISOString(),
     }
   }, [period, startDate, endDate])
 
@@ -73,6 +78,20 @@ export function ReportsContent() {
     }
   )
 
+  // Client-side filtering as backup to ensure proper date filtering
+  const filteredExpenses = useMemo(() => {
+    if (!reportData?.expenses) return []
+    
+    const range = getDateRange(period)
+    const startTime = (startDate || range.start).getTime()
+    const endTime = (endDate || range.end).getTime()
+    
+    return reportData.expenses.filter((expense: { date: string }) => {
+      const expenseTime = new Date(expense.date).getTime()
+      return expenseTime >= startTime && expenseTime <= endTime
+    })
+  }, [reportData?.expenses, period, startDate, endDate])
+
   const handlePeriodChange = (newPeriod: 'week' | 'month') => {
     setPeriod(newPeriod)
     const range = getDateRange(newPeriod)
@@ -80,22 +99,10 @@ export function ReportsContent() {
     setEndDate(range.end)
   }
 
-  const categoryLabels = {
-    transportation: 'Transportation',
-    food: 'Food & Dining',
-    bills: 'Bills & Utilities',
-    entertainment: 'Entertainment',
-    shopping: 'Shopping',
-    healthcare: 'Healthcare',
-    education: 'Education',
-    travel: 'Travel',
-    groceries: 'Groceries',
-    utilities: 'Utilities',
-    others: 'Others'
-  }
+  // Category labels are now handled by the centralized categories system
 
   // Prepare data for currency conversion
-  const expensesForConversion = reportData?.expenses?.map((expense: { amount: number; currency_code?: string }) => ({
+  const expensesForConversion = filteredExpenses?.map((expense: { amount: number; currency_code?: string }) => ({
     amount: expense.amount,
     currency_code: expense.currency_code || 'PHP'
   })) || []
@@ -104,41 +111,48 @@ export function ReportsContent() {
 
   // Calculate converted totals
   const convertedTotal = useMemo(() => {
-    if (!reportData?.expenses || !convertedAmounts) return 0
+    if (!filteredExpenses || !convertedAmounts) return 0
     return convertedAmounts.reduce((sum, amount) => sum + amount, 0)
-  }, [reportData?.expenses, convertedAmounts])
+  }, [filteredExpenses, convertedAmounts])
 
   // Calculate converted category totals
   const convertedCategoryTotals = useMemo(() => {
-    if (!reportData?.expenses || !convertedAmounts) return {}
+    if (!filteredExpenses || !convertedAmounts) return {}
     
-    return reportData.expenses.reduce((acc: Record<string, number>, expense: { category: string }, index: number) => {
+    return filteredExpenses.reduce((acc: Record<string, number>, expense: { category: string }, index: number) => {
       const convertedAmount = convertedAmounts[index] || 0
       acc[expense.category] = (acc[expense.category] || 0) + convertedAmount
       return acc
     }, {} as Record<string, number>)
-  }, [reportData?.expenses, convertedAmounts])
+  }, [filteredExpenses, convertedAmounts])
 
   // Calculate converted daily totals
   const convertedDailyTotals = useMemo(() => {
-    if (!reportData?.expenses || !convertedAmounts) return []
+    if (!filteredExpenses || !convertedAmounts) return []
     
     const dailyTotals: Record<string, number> = {}
     
-    reportData.expenses.forEach((expense: { date: string }, index: number) => {
+    filteredExpenses.forEach((expense: { date: string }, index: number) => {
       const convertedAmount = convertedAmounts[index] || 0
-      const date = expense.date
-      dailyTotals[date] = (dailyTotals[date] || 0) + convertedAmount
+      // Convert timestamp to local date string for proper grouping
+      const expenseDate = new Date(expense.date)
+      const dateString = expenseDate.getFullYear() + '-' + 
+        String(expenseDate.getMonth() + 1).padStart(2, '0') + '-' + 
+        String(expenseDate.getDate()).padStart(2, '0')
+      dailyTotals[dateString] = (dailyTotals[dateString] || 0) + convertedAmount
     })
     
-    return Object.entries(dailyTotals).map(([date, amount]) => ({
-      date,
-      amount,
-    }))
-  }, [reportData?.expenses, convertedAmounts])
+    return Object.entries(dailyTotals)
+      .map(([date, amount]) => ({
+        date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        fullDate: date,
+        amount,
+      }))
+      .sort((a, b) => new Date(a.fullDate).getTime() - new Date(b.fullDate).getTime())
+  }, [filteredExpenses, convertedAmounts])
 
   const pieData = convertedCategoryTotals ? Object.entries(convertedCategoryTotals).map(([category, amount], index) => ({
-    category: categoryLabels[category as keyof typeof categoryLabels],
+    category: getCategoryLabel(category),
     amount: amount,
     fill: colors[index % colors.length]
   })) : []
@@ -160,11 +174,11 @@ export function ReportsContent() {
             <Skeleton className="h-4 w-64" />
           </CardHeader>
           <CardContent>
-            <div className="flex gap-4 items-end">
-              {Array.from({ length: 4 }).map((_, i) => (
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} className="space-y-2">
                   <Skeleton className="h-4 w-16" />
-                  <Skeleton className="h-10 w-32" />
+                  <Skeleton className="h-10 w-full" />
                 </div>
               ))}
             </div>
@@ -247,12 +261,6 @@ export function ReportsContent() {
 
       {/* Report Navigation */}
       <div className="space-y-4">
-        <div>
-          <h2 className="text-xl font-semibold mb-2">Specialized Reports</h2>
-          <p className="text-sm text-muted-foreground mb-4">
-            Choose from detailed reports focused on specific time periods and analysis types.
-          </p>
-        </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Link href="/reports/daily">
           <Card className="hover:shadow-md transition-shadow cursor-pointer">
@@ -324,15 +332,6 @@ export function ReportsContent() {
         </div>
       </div>
 
-      {/* Custom Date Range Analysis */}
-      <div className="space-y-4">
-        <div>
-          <h2 className="text-xl font-semibold mb-2">Custom Date Range Analysis</h2>
-          <p className="text-sm text-muted-foreground mb-4">
-            Create custom reports for any date range to analyze specific periods or compare different timeframes.
-          </p>
-        </div>
-      </div>
 
       {/* Controls */}
       <Card>
@@ -343,11 +342,11 @@ export function ReportsContent() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4 items-end">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             <div className="space-y-2">
               <label className="text-sm font-medium">Period</label>
               <Select value={period} onValueChange={handlePeriodChange}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -414,7 +413,7 @@ export function ReportsContent() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {reportData?.expenses?.length || 0}
+              {filteredExpenses?.length || 0}
             </div>
             <p className="text-xs text-muted-foreground">
               Total transactions
@@ -436,7 +435,17 @@ export function ReportsContent() {
             {pieData.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
-                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <ChartTooltip 
+                    content={<ChartTooltipContent 
+                      formatter={(value, name) => [
+                        <div key="tooltip">
+                          <div>{name}</div>
+                          <div>{formatCurrency(Number(value), currency)}</div>
+                        </div>
+                      ]}
+                      labelFormatter={(label) => `${label}`}
+                    />} 
+                  />
                   <Pie
                     data={pieData}
                     dataKey="amount"
@@ -475,7 +484,16 @@ export function ReportsContent() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis />
-                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <ChartTooltip 
+                    content={<ChartTooltipContent 
+                      formatter={(value) => [
+                        <div key="tooltip">
+                          <div>{formatCurrency(Number(value), currency)}</div>
+                        </div>
+                      ]}
+                      labelFormatter={(label) => `${label}`}
+                    />} 
+                  />
                   <Bar dataKey="amount" fill={colors[0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -511,7 +529,7 @@ export function ReportsContent() {
                 {Object.entries(convertedCategoryTotals)
                   .sort(([,a], [,b]) => (b as number) - (a as number))
                   .map(([category, amount]) => {
-                    const categoryCount = reportData?.expenses?.filter((expense: { category: string }) => expense.category === category).length || 0
+                    const categoryCount = filteredExpenses?.filter((expense: { category: string }) => expense.category === category).length || 0
                     const percentage = ((amount as number) / (convertedTotal || 1)) * 100
                     
                     return (
@@ -523,7 +541,7 @@ export function ReportsContent() {
                               style={{ backgroundColor: colors[Object.keys(convertedCategoryTotals).indexOf(category) % colors.length] }}
                             />
                             <span className="font-medium">
-                              {categoryLabels[category as keyof typeof categoryLabels] || category}
+                              {getCategoryLabel(category)}
                             </span>
                           </div>
                         </TableCell>

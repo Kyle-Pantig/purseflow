@@ -17,21 +17,13 @@ import {
 } from '@/components/ui/table'
 import { useCurrency } from '@/contexts/currency-context'
 import { useCurrencyAmountsWithCurrency } from '@/hooks/use-currency-amount'
+import { isThisWeek, timestampToLocalDateString, getDayBounds } from '@/lib/date-utils'
 import { formatCurrency } from '@/lib/currency'
 import { useColor } from '@/contexts/color-context'
 import { ResponsiveContainer, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell, LineChart, Line } from 'recharts'
 import { ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { subWeeks, format, startOfWeek, endOfWeek } from 'date-fns'
-
-const categoryLabels = {
-  groceries: 'Groceries',
-  bills: 'Bills & Utilities',
-  travel: 'Travel',
-  shopping: 'Shopping',
-  utilities: 'Utilities',
-  food: 'Food & Dining',
-  others: 'Others'
-}
+import { getCategoryLabel } from '@/lib/categories'
 
 // Colors will be generated from user's color preferences
 
@@ -70,7 +62,11 @@ export function WeeklyReportContent() {
     return weeks.map(({ weekDate, weekStart, weekEnd }) => {
       const weekExpenses = allExpenses.filter((expense: { date: string }) => {
         const expenseDate = new Date(expense.date)
-        return expenseDate >= weekStart && expenseDate <= weekEnd
+        // Use local timezone comparison
+        const expenseDateOnly = new Date(expenseDate.getFullYear(), expenseDate.getMonth(), expenseDate.getDate())
+        const weekStartOnly = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate())
+        const weekEndOnly = new Date(weekEnd.getFullYear(), weekEnd.getMonth(), weekEnd.getDate())
+        return expenseDateOnly >= weekStartOnly && expenseDateOnly <= weekEndOnly
       })
 
       // Find the corresponding converted amounts for this week's expenses
@@ -101,7 +97,7 @@ export function WeeklyReportContent() {
         weekEnd: format(weekEnd, 'MMM dd'),
         amount: totalAmount,
         count: weekExpenses.length,
-        topCategory: categoryLabels[topCategory.category as keyof typeof categoryLabels] || topCategory.category,
+        topCategory: getCategoryLabel(topCategory.category),
         topCategoryAmount: topCategory.amount
       }
     })
@@ -116,8 +112,7 @@ export function WeeklyReportContent() {
     const currentWeekEnd = endOfWeek(new Date(), { weekStartsOn: 1 })
     
     const currentWeekExpenses = allExpenses.filter((expense: { date: string }) => {
-      const expenseDate = new Date(expense.date)
-      return expenseDate >= currentWeekStart && expenseDate <= currentWeekEnd
+      return isThisWeek(expense.date)
     })
 
     const categoryTotals = currentWeekExpenses.reduce((acc: Record<string, number>, expense: { category: string; id: string }) => {
@@ -129,7 +124,7 @@ export function WeeklyReportContent() {
     const totalAmount = Object.values(categoryTotals).reduce((sum: number, amount: unknown) => sum + (amount as number), 0)
 
     return Object.entries(categoryTotals).map(([category, amount], index) => ({
-      category: categoryLabels[category as keyof typeof categoryLabels] || category,
+      category: getCategoryLabel(category),
       amount: amount,
       percentage: totalAmount > 0 ? (((amount as number) / totalAmount) * 100).toFixed(1) : 0,
       fill: colors[index % colors.length]
@@ -401,7 +396,16 @@ export function WeeklyReportContent() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="week" />
                   <YAxis />
-                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <ChartTooltip 
+                    content={<ChartTooltipContent 
+                      formatter={(value) => [
+                        <div key="tooltip">
+                          <div>{formatCurrency(Number(value), currency)}</div>
+                        </div>
+                      ]}
+                      labelFormatter={(label) => `${label}`}
+                    />} 
+                  />
                   <Line
                     type="monotone"
                     dataKey="amount"
@@ -426,7 +430,17 @@ export function WeeklyReportContent() {
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <ChartTooltip 
+                    content={<ChartTooltipContent 
+                      formatter={(value, name) => [
+                        <div key="tooltip">
+                          <div>{name}</div>
+                          <div>{formatCurrency(Number(value), currency)}</div>
+                        </div>
+                      ]}
+                      labelFormatter={(label) => `${label}`}
+                    />} 
+                  />
                   <Pie 
                     data={currentWeekCategoryData} 
                     dataKey="amount" 
