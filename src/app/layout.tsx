@@ -48,13 +48,13 @@ export const metadata: Metadata = {
     "budget goals",
   ],
   title: {
-    default: "PurseFlow",
+    default: "PurseFlow - Expense Tracker & Budget Management App",
     template: `%s | PurseFlow`,
   },
   description:
     "PurseFlow - Track expenses, manage budgets, and gain financial insights with our intuitive expense tracker and budget management app.",
   openGraph: {
-    title: "PurseFlow",
+    title: "PurseFlow - Smart Expense Tracker & Budget Management App",
     description:
       "PurseFlow - Track expenses, manage budgets, and gain financial insights with our intuitive expense tracker and budget management app.",
     url: "https://purseflow.vercel.app",

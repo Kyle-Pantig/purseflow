@@ -3,8 +3,8 @@ import { DashboardContent } from "@/components/dashboard-content"
 import { requireAuth } from "@/lib/auth-server"
 
 export const metadata: Metadata = {
-  title: "Dashboard",
-  description: "Overview of your expenses, income, and financial insights",
+  title: "Dashboard - Track Expenses & Income",
+  description: "Overview of your expenses, income, and financial insights with PurseFlow's comprehensive dashboard",
 }
 
 export default async function Page() {

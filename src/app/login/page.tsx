@@ -3,8 +3,8 @@ import { Suspense } from 'react'
 import { LoginForm } from "@/components/login-form"
 
 export const metadata: Metadata = {
-  title: "Login",
-  description: "Sign in to your expense tracker account",
+  title: "Login - Access Your PurseFlow Account",
+  description: "Sign in to your PurseFlow expense tracker account to manage your finances",
 }
 
 function LoginFormWrapper() {

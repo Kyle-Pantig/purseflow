@@ -3,8 +3,8 @@ import { ProfileContent } from "@/components/profile-content"
 import { requireAuth } from "@/lib/auth-server"
 
 export const metadata: Metadata = {
-  title: "Profile Settings",
-  description: "Manage your profile information and income settings",
+  title: "Profile Settings - Manage Account & Personal Info",
+  description: "Manage your profile information and income settings in your PurseFlow account",
 }
 
 export default async function ProfilePage() {

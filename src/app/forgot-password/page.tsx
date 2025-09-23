@@ -2,8 +2,8 @@ import { Metadata } from 'next'
 import { ForgotPasswordForm } from "@/components/forgot-password-form"
 
 export const metadata: Metadata = {
-  title: "Forgot Password",
-  description: "Reset your password to regain access to your account",
+  title: "Forgot Password - Reset Your PurseFlow Account",
+  description: "Reset your password to regain access to your PurseFlow expense tracker account",
 }
 
 export default function ForgotPasswordPage() {

@@ -3,8 +3,8 @@ import { requireAuth } from "@/lib/auth-server"
 import { Metadata } from "next"
 
 export const metadata: Metadata = {
-    title: "Preferences",
-    description: "Customize your app experience with personalized settings",
+    title: "App Preferences - Customize Your PurseFlow Experience",
+    description: "Customize your PurseFlow app experience with personalized settings and preferences",
 }
 
 export default async function PreferencesPage() {
