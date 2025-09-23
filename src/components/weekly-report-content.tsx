@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/table'
 import { useCurrency } from '@/contexts/currency-context'
 import { useCurrencyAmountsWithCurrency } from '@/hooks/use-currency-amount'
-import { isThisWeek, timestampToLocalDateString, getDayBounds } from '@/lib/date-utils'
+import { isThisWeek } from '@/lib/date-utils'
 import { formatCurrency } from '@/lib/currency'
 import { useColor } from '@/contexts/color-context'
 import { ResponsiveContainer, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell, LineChart, Line } from 'recharts'
@@ -108,8 +108,6 @@ export function WeeklyReportContent() {
   const currentWeekCategoryData = useMemo(() => {
     if (!allExpenses || !allConvertedAmounts) return []
     
-    const currentWeekStart = startOfWeek(new Date(), { weekStartsOn: 1 })
-    const currentWeekEnd = endOfWeek(new Date(), { weekStartsOn: 1 })
     
     const currentWeekExpenses = allExpenses.filter((expense: { date: string }) => {
       return isThisWeek(expense.date)

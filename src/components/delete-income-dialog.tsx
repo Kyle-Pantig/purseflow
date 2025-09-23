@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button'
 import { AlertTriangle, Trash2 } from 'lucide-react'
 import { trpc } from '@/lib/trpc-client'
-import { formatDateForDisplay, formatTimestampForDisplay } from '@/lib/date-utils'
+import { formatTimestampForDisplay } from '@/lib/date-utils'
 
 interface Income {
   id: string

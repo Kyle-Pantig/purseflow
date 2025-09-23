@@ -11,7 +11,7 @@ import { DollarSign, TrendingUp, Calendar, CreditCard, Wallet, TrendingDown, Arr
 import { AddExpenseDialog } from './add-expense-dialog'
 import { formatCurrency } from '@/lib/currency'
 import { useCurrency } from '@/contexts/currency-context'
-import { formatDateForDisplay, formatTimestampForDisplay, isToday, isThisWeek, isThisMonth, isThisYear, timestampToLocalDateString } from '@/lib/date-utils'
+import { formatTimestampForDisplay, isToday, isThisWeek, isThisMonth, isThisYear, timestampToLocalDateString } from '@/lib/date-utils'
 import { useColor } from '@/contexts/color-context'
 import { useAuth } from '@/contexts/auth-context'
 import { useCurrencyAmountsWithCurrency, useCurrencyAmountWithCurrency } from '@/hooks/use-currency-amount'

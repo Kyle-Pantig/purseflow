@@ -22,7 +22,7 @@ import { useCurrencyAmountsWithCurrency } from '@/hooks/use-currency-amount'
 import { formatCurrency } from '@/lib/currency'
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell } from 'recharts'
 import { ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
-import { subDays, format, startOfDay, endOfDay, eachDayOfInterval } from 'date-fns'
+import { subDays, format, eachDayOfInterval } from 'date-fns'
 import { getCategoryLabel } from '@/lib/categories'
 
 export function DailyReportContent() {

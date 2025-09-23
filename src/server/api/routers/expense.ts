@@ -1,7 +1,6 @@
 import { z } from 'zod'
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc'
 import { supabaseServer } from '@/lib/supabase-server'
-import { getTodayLocalDateString, toLocalTimestampString } from '@/lib/date-utils'
 
 export const expenseRouter = createTRPCRouter({
   addExpense: protectedProcedure

@@ -11,9 +11,8 @@ import { DeleteIncomeDialog } from '@/components/delete-income-dialog'
 import { trpc } from '@/lib/trpc-client'
 import { formatCurrency } from '@/lib/currency'
 import { useCurrency } from '@/contexts/currency-context'
-import { formatDateForDisplay, formatTimestampForDisplay } from '@/lib/date-utils'
+import { formatTimestampForDisplay } from '@/lib/date-utils'
 import { useCurrencyAmountsWithCurrency } from '@/hooks/use-currency-amount'
-import { format } from 'date-fns'
 
 const incomeTypeLabels = {
   salary: 'Salary',

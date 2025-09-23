@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/table'
 import { useCurrency } from '@/contexts/currency-context'
 import { useCurrencyAmountsWithCurrency } from '@/hooks/use-currency-amount'
-import { isThisMonth, timestampToLocalDateString, getDayBounds } from '@/lib/date-utils'
+import { isThisMonth } from '@/lib/date-utils'
 import { formatCurrency } from '@/lib/currency'
 import { useColor } from '@/contexts/color-context'
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell } from 'recharts'
@@ -104,8 +104,6 @@ export function MonthlyReportContent() {
   const currentMonthCategoryData = useMemo(() => {
     if (!allExpenses || !allConvertedAmounts) return []
     
-    const currentMonthStart = startOfMonth(new Date())
-    const currentMonthEnd = endOfMonth(new Date())
     
     const currentMonthExpenses = allExpenses.filter((expense: { date: string }) => {
       return isThisMonth(expense.date)

@@ -1,7 +1,6 @@
 import { z } from 'zod'
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc'
 import { supabaseServer } from '@/lib/supabase-server'
-import { toLocalTimestampString } from '@/lib/date-utils'
 import { addMonths, addYears, endOfMonth } from 'date-fns'
 
 // Helper function to auto-generate due recurring income

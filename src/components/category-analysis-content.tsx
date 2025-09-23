@@ -17,13 +17,12 @@ import {
 import { PieChart, BarChart3, TrendingUp, TrendingDown, Target, Award } from 'lucide-react'
 import { useCurrency } from '@/contexts/currency-context'
 import { useCurrencyAmountsWithCurrency } from '@/hooks/use-currency-amount'
-import { getDayBounds } from '@/lib/date-utils'
 import { formatCurrency } from '@/lib/currency'
 import { useColor } from '@/contexts/color-context'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, PieChart as RechartsPieChart, Pie, Cell, LineChart, Line } from 'recharts'
 import { ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { subMonths, format, startOfMonth, endOfMonth, eachMonthOfInterval } from 'date-fns'
-import { CATEGORY_LABELS, getCategoryLabel, getCategoriesFromData } from '@/lib/categories'
+import { getCategoryLabel, getCategoriesFromData } from '@/lib/categories'
 
 // Category colors will be generated from user's color preferences
 

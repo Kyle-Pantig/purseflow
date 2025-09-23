@@ -24,13 +24,13 @@ import {
 } from '@/components/ui/table'
 import { formatCurrency } from '@/lib/currency'
 import { useCurrency } from '@/contexts/currency-context'
-import { formatDateForDisplay, formatTimestampForDisplay } from '@/lib/date-utils'
+import { formatTimestampForDisplay } from '@/lib/date-utils'
 import { useCurrencyAmountsWithCurrency } from '@/hooks/use-currency-amount'
 import { AddExpenseDialog } from './add-expense-dialog'
 import { DeleteExpenseDialog } from './delete-expense-dialog'
 import { DatePicker } from './date-picker'
 import { Search, Filter, Calendar, DollarSign, Edit2, Check, X, Trash2 } from 'lucide-react'
-import { getCategoryLabel } from '@/lib/categories'
+import { getCategoryLabel, Category } from '@/lib/categories'
 
 const categories = [
   { value: 'all', label: 'All Categories' },
@@ -64,7 +64,7 @@ export function ExpensesContent() {
 
   // Delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [expenseToDelete, setExpenseToDelete] = useState<any>(null)
+  const [expenseToDelete, setExpenseToDelete] = useState<{ id: string; amount: number; category: Category; description?: string; date: string } | null>(null)
   
   const { currency } = useCurrency()
   const { data: expenses, isLoading, error } = trpc.expense.getRecentExpenses.useQuery({ limit: 100 })
@@ -85,7 +85,7 @@ export function ExpensesContent() {
   })
 
   // Delete expense function
-  const handleDeleteClick = (expense: any) => {
+  const handleDeleteClick = (expense: { id: string; amount: number; category: Category; description?: string; date: string }) => {
     setExpenseToDelete(expense)
     setDeleteDialogOpen(true)
   }
@@ -116,7 +116,7 @@ export function ExpensesContent() {
   }
 
   // Inline editing functions
-  const startEdit = (expense: any) => {
+  const startEdit = (expense: { id: string; amount: number; category: Category; description?: string; date: string }) => {
     setEditingId(expense.id)
     setEditForm({
       amount: expense.amount.toString(),
@@ -140,7 +140,7 @@ export function ExpensesContent() {
     updateExpenseMutation.mutate({
       id: editingId,
       amount: parsedAmount,
-      category: editForm.category as any,
+      category: editForm.category as Category,
       description: editForm.description || undefined,
       date: editForm.date.toISOString(),
     })
@@ -423,7 +423,7 @@ export function ExpensesContent() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredExpenses.map((expense, index) => (
+                  {filteredExpenses.map((expense) => (
                     <TableRow key={expense.id}>
                       <TableCell>
                         {editingId === expense.id ? (
