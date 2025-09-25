@@ -25,7 +25,8 @@ import {
   Lock,
   Eye,
   EyeOff,
-  AlertTriangle
+  AlertTriangle,
+  Receipt
 } from 'lucide-react'
 import { trpc } from '@/lib/trpc-client'
 import { formatCurrency } from '@/lib/currency'
@@ -33,6 +34,7 @@ import { AddIncomeDialog } from '@/components/add-income-dialog'
 import { IncomeList } from '@/components/income-list'
 import { RecurringIncomeManager } from '@/components/recurring-income-manager'
 import { ResetDataDialog } from '@/components/reset-data-dialog'
+import { QuickAmountsTable } from '@/components/quick-amounts-table'
 import { updatePassword } from '@/lib/auth'
 import { toast } from 'sonner'
 
@@ -65,9 +67,10 @@ export function ProfileContent() {
     month: new Date().getMonth() + 1
   })
   const { data: recurringStatus, isLoading: recurringLoading } = trpc.income.getRecurringIncomeStatus.useQuery()
+  const { data: quickAmounts, isLoading: quickAmountsLoading } = trpc.quickAmounts.getAll.useQuery()
 
   // Combined loading state for all profile data
-  const isProfileLoading = preferencesLoading || incomeLoading || monthlyIncomeLoading || recurringLoading
+  const isProfileLoading = preferencesLoading || incomeLoading || monthlyIncomeLoading || recurringLoading || quickAmountsLoading
 
   const utils = trpc.useUtils()
   
@@ -182,30 +185,56 @@ export function ProfileContent() {
   if (isProfileLoading) {
     return (
       <div className="w-full space-y-6">
-        {/* User Information Skeleton */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              User Information
-            </CardTitle>
-            <CardDescription>
-              Your account details and profile information
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <Skeleton className="h-4 w-12 mb-2" />
-                <Skeleton className="h-6 w-48" />
+        {/* User Information & Change Password Skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* User Information Skeleton */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                User Information
+              </CardTitle>
+              <CardDescription>
+                Your account details and profile information
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-12 rounded" />
+                  <Skeleton className="h-6 w-48 rounded" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-16 rounded" />
+                  <Skeleton className="h-4 w-64 rounded" />
+                </div>
               </div>
-              <div>
-                <Skeleton className="h-4 w-16 mb-2" />
-                <Skeleton className="h-4 w-64" />
+            </CardContent>
+          </Card>
+
+          {/* Change Password Skeleton */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Lock className="h-5 w-5" />
+                Change Password
+              </CardTitle>
+              <CardDescription>
+                Update your account password for better security
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <Skeleton className="h-4 w-64 rounded" />
+                </div>
+                <div className="flex justify-end">
+                  <Skeleton className="h-10 w-32 rounded-md" />
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Monthly Salary Skeleton */}
         <Card>
@@ -220,11 +249,11 @@ export function ProfileContent() {
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <div>
-                <Skeleton className="h-8 w-32 mb-2" />
-                <Skeleton className="h-4 w-40" />
+              <div className="space-y-2">
+                <Skeleton className="h-8 w-32 rounded" />
+                <Skeleton className="h-4 w-40 rounded" />
               </div>
-              <Skeleton className="h-10 w-20" />
+              <Skeleton className="h-10 w-20 rounded-md" />
             </div>
           </CardContent>
         </Card>
@@ -313,165 +342,213 @@ export function ProfileContent() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Quick Amount Presets Skeleton */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Receipt className="h-5 w-5" />
+              Quick Amount Presets
+            </CardTitle>
+            <CardDescription>
+              Create presets for quick expense adding with specific amounts and categories
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <Skeleton className="h-5 w-40 mb-1" />
+                  <Skeleton className="h-4 w-64" />
+                </div>
+                <Skeleton className="h-10 w-24" />
+              </div>
+              <div className="rounded-md border">
+                <div className="p-4">
+                  <div className="space-y-3">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <div key={i} className="flex items-center justify-between py-2">
+                        <div className="flex items-center gap-3">
+                          <Skeleton className="h-6 w-20 rounded-full" />
+                          <Skeleton className="h-4 w-16" />
+                          <Skeleton className="h-4 w-24" />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Skeleton className="h-8 w-8 rounded" />
+                          <Skeleton className="h-8 w-8 rounded" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     )
   }
 
   return (
     <div className="w-full space-y-6">
-      {/* User Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            User Information
-          </CardTitle>
-          <CardDescription>
-            Your account details and profile information
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <Label className="text-sm font-medium text-muted-foreground">Email</Label>
-              <p className="text-lg font-medium">{user?.email}</p>
+      {/* User Information & Change Password */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* User Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              User Information
+            </CardTitle>
+            <CardDescription>
+              Your account details and profile information
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">Email</Label>
+                <p className="text-lg font-medium">{user?.email}</p>
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">User ID</Label>
+                <p className="text-sm font-mono text-muted-foreground">{user?.id}</p>
+              </div>
             </div>
-            <div>
-              <Label className="text-sm font-medium text-muted-foreground">User ID</Label>
-              <p className="text-sm font-mono text-muted-foreground">{user?.id}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      {/* Change Password */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Lock className="h-5 w-5" />
-            Change Password
-          </CardTitle>
-          <CardDescription>
-            Update your account password for better security
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {isChangingPassword ? (
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="currentPassword">Current Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="currentPassword"
-                      type={showCurrentPassword ? "text" : "password"}
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      placeholder="Enter your current password"
-                      className="pr-10"
-                      autoComplete="current-password"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+        {/* Change Password */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Lock className="h-5 w-5" />
+              Change Password
+            </CardTitle>
+            <CardDescription>
+              Update your account password for better security
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {isChangingPassword ? (
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="currentPassword">Current Password</Label>
+                    <div className="relative">
+                      <Input
+                        id="currentPassword"
+                        type={showCurrentPassword ? "text" : "password"}
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        placeholder="Enter your current password"
+                        className="pr-10"
+                        autoComplete="current-password"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      >
+                        {showCurrentPassword ? (
+                          <EyeOff className="h-4 w-4 text-gray-400" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-gray-400" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="newPassword">New Password</Label>
+                    <div className="relative">
+                      <Input
+                        id="newPassword"
+                        type={showNewPassword ? "text" : "password"}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Enter new password"
+                        className="pr-10"
+                        autoComplete="new-password"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                      >
+                        {showNewPassword ? (
+                          <EyeOff className="h-4 w-4 text-gray-400" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-gray-400" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                    <div className="relative">
+                      <Input
+                        id="confirmPassword"
+                        type={showConfirmPassword ? "text" : "password"}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Confirm new password"
+                        className="pr-10"
+                        autoComplete="new-password"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="h-4 w-4 text-gray-400" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-gray-400" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={handlePasswordChange}
+                      disabled={isUpdatingPassword || !currentPassword || !newPassword || !confirmPassword}
                     >
-                      {showCurrentPassword ? (
-                        <EyeOff className="h-4 w-4 text-gray-400" />
-                      ) : (
-                        <Eye className="h-4 w-4 text-gray-400" />
-                      )}
+                      {isUpdatingPassword ? 'Updating...' : 'Update Password'}
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={handleCancelPasswordChange}
+                      disabled={isUpdatingPassword}
+                    >
+                      Cancel
                     </Button>
                   </div>
                 </div>
-                <div>
-                  <Label htmlFor="newPassword">New Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="newPassword"
-                      type={showNewPassword ? "text" : "password"}
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="Enter new password"
-                      className="pr-10"
-                      autoComplete="new-password"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() => setShowNewPassword(!showNewPassword)}
-                    >
-                      {showNewPassword ? (
-                        <EyeOff className="h-4 w-4 text-gray-400" />
-                      ) : (
-                        <Eye className="h-4 w-4 text-gray-400" />
-                      )}
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      Password was last updated when you created your account
+                    </p>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button onClick={() => setIsChangingPassword(true)} variant="outline">
+                      <Lock className="h-4 w-4 mr-2" />
+                      Change Password
                     </Button>
                   </div>
                 </div>
-                <div>
-                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="confirmPassword"
-                      type={showConfirmPassword ? "text" : "password"}
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Confirm new password"
-                      className="pr-10"
-                      autoComplete="new-password"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    >
-                      {showConfirmPassword ? (
-                        <EyeOff className="h-4 w-4 text-gray-400" />
-                      ) : (
-                        <Eye className="h-4 w-4 text-gray-400" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button 
-                    onClick={handlePasswordChange}
-                    disabled={isUpdatingPassword || !currentPassword || !newPassword || !confirmPassword}
-                  >
-                    {isUpdatingPassword ? 'Updating...' : 'Update Password'}
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={handleCancelPasswordChange}
-                    disabled={isUpdatingPassword}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    Password was last updated when you created your account
-                  </p>
-                </div>
-                <Button onClick={() => setIsChangingPassword(true)} variant="outline">
-                  <Lock className="h-4 w-4 mr-2" />
-                  Change Password
-                </Button>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Monthly Salary */}
       <Card>
@@ -629,6 +706,9 @@ export function ProfileContent() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Quick Amount Presets */}
+      <QuickAmountsTable presets={quickAmounts} />
 
       {/* Danger Zone */}
       <Card className="border-destructive/20">

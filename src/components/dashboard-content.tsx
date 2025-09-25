@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { DollarSign, TrendingUp, Calendar, CreditCard, Wallet, TrendingDown, ArrowRight, Info } from 'lucide-react'
 import { AddExpenseDialog } from './add-expense-dialog'
+import { QuickAddExpenses } from './quick-add-expenses'
 import { formatCurrency } from '@/lib/currency'
 import { useCurrency } from '@/contexts/currency-context'
 import { formatTimestampForDisplay, isToday, isThisWeek, isThisMonth, isThisYear, timestampToLocalDateString } from '@/lib/date-utils'
@@ -26,8 +27,18 @@ export function DashboardContent() {
   const [isMounted, setIsMounted] = useState(false)
   const router = useRouter()
   const { user } = useAuth()
-  const { data: recentExpenses, isLoading: recentLoading, error: recentError } = trpc.expense.getRecentExpenses.useQuery({ limit: 5 })
-  const { data: allExpensesForToday, isLoading: todayLoading, error: todayError } = trpc.expense.getTodayExpenses.useQuery()
+  const { data: recentExpenses, isLoading: recentLoading, error: recentError } = trpc.expense.getRecentExpenses.useQuery({ limit: 5 }, {
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
+    retry: 1
+  })
+  const { data: allExpensesForToday, isLoading: todayLoading, error: todayError } = trpc.expense.getTodayExpenses.useQuery(undefined, {
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
+    retry: 1
+  })
   
   // Filter today's expenses using date-utils for proper timezone handling
   const todayExpenses = useMemo(() => {
@@ -43,11 +54,19 @@ export function DashboardContent() {
     {
       enabled: !!user, // Only run query if user is authenticated
       retry: false, // Don't retry on 401 errors
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes
+      refetchOnWindowFocus: false,
     }
   )
   const { data: monthlyIncome, isLoading: monthlyIncomeLoading } = trpc.income.getMonthlyIncome.useQuery({
     year: new Date().getFullYear(),
     month: new Date().getMonth() + 1
+  }, {
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: false,
+    retry: 1
   })
   const currentYear = new Date().getFullYear()
   const yearlyStartDate = new Date(currentYear, 0, 1).toISOString().split('T')[0]
@@ -55,6 +74,11 @@ export function DashboardContent() {
   const { data: yearlyIncome, isLoading: yearlyIncomeLoading } = trpc.income.getIncomeByDate.useQuery({
     startDate: yearlyStartDate,
     endDate: yearlyEndDate
+  }, {
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: false,
+    retry: 1
   })
   const { currency } = useCurrency()
   const { colors } = useColor()
@@ -65,7 +89,20 @@ export function DashboardContent() {
   
   
   // Get all expenses for weekly, monthly, and yearly calculations
-  const { data: allExpenses, isLoading: allLoading, error: allError } = trpc.expense.getAllExpenses.useQuery()
+  const { data: allExpenses, isLoading: allLoading, error: allError } = trpc.expense.getAllExpenses.useQuery(undefined, {
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
+    retry: 1
+  })
+  
+  // Get quick amounts for the quick add expenses component
+  const { data: quickAmounts, isLoading: quickAmountsLoading } = trpc.quickAmounts.getAll.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: false,
+    retry: 1
+  })
   
   // Filter expenses using date-utils for proper timezone handling
   const weeklyExpenses = useMemo(() => 
@@ -306,8 +343,7 @@ export function DashboardContent() {
 
 
   // Only show skeleton loading for initial data fetch, not for currency conversions
-  const isInitialLoading = recentLoading || todayLoading || allLoading || preferencesLoading || monthlyIncomeLoading || yearlyIncomeLoading
-  const isConverting = isConvertingToday || isConvertingWeekly || isConvertingMonthly || isConvertingYearly || isConvertingIncome || isConvertingYearlyIncome || isConvertingSalary || isConvertingYearlySalary
+  const isInitialLoading = recentLoading || todayLoading || allLoading || preferencesLoading || monthlyIncomeLoading || yearlyIncomeLoading || quickAmountsLoading
   const hasError = recentError || todayError || allError
 
   // Calculate number of visible summary cards for grid layout
@@ -319,7 +355,7 @@ export function DashboardContent() {
     if (visibleSummaryCards <= 2) {
       return "grid-cols-2"
     } else if (visibleSummaryCards === 3) {
-      return "grid-cols-2 md:grid-cols-3 lg:grid-cols-3"
+      return "grid-cols-2 md:grid-cols-3"
     } else if (visibleSummaryCards === 4) {
       return "grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
     } else if (visibleSummaryCards === 5) {
@@ -331,12 +367,13 @@ export function DashboardContent() {
   if (isInitialLoading) {
     return (
       <div className="space-y-6">
+        {/* Header Skeleton */}
         <div className="flex items-center justify-between">
-          <div>
-            <Skeleton className="h-8 w-48 mb-2" />
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-48" />
             <Skeleton className="h-4 w-64" />
           </div>
-          <Skeleton className="h-10 w-32" />
+          <Skeleton className="h-10 w-32 rounded-md" />
         </div>
 
         {/* Summary Cards Skeleton */}
@@ -344,8 +381,8 @@ export function DashboardContent() {
           {Array.from({ length: visibleSummaryCards }).map((_, i) => (
             <Card key={i}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-4 w-4" />
+                <Skeleton className="h-4 w-24 rounded" />
+                <Skeleton className="h-4 w-4 rounded-full" />
               </CardHeader>
               <CardContent>
                 <Skeleton className="h-8 w-20 mb-2" />
@@ -354,6 +391,29 @@ export function DashboardContent() {
             </Card>
           ))}
         </div>
+
+        {/* Quick Add Expenses Skeleton */}
+        <Card>
+          <CardHeader>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-2">
+                <Skeleton className="h-6 w-48" />
+                <Skeleton className="h-4 w-64" />
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Skeleton className="h-8 w-24" />
+                <Skeleton className="h-8 w-32" />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="px-3 sm:px-6">
+            <div className="flex flex-wrap gap-2 sm:gap-3 justify-center sm:justify-start">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-16 w-16 sm:h-20 sm:w-20 rounded-full" />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Monthly & Yearly Overview Skeleton */}
         <div className="grid gap-6 grid-cols-1 lg:grid-cols-5">
@@ -367,10 +427,10 @@ export function DashboardContent() {
                 {Array.from({ length: 3 }).map((_, i) => (
                   <div key={i} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Skeleton className="h-4 w-4" />
-                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className="h-4 w-4 rounded-full" />
+                      <Skeleton className="h-4 w-20 rounded" />
                     </div>
-                    <Skeleton className="h-6 w-16" />
+                    <Skeleton className="h-6 w-16 rounded" />
                   </div>
                 ))}
               </div>
@@ -387,18 +447,18 @@ export function DashboardContent() {
                 {Array.from({ length: 3 }).map((_, i) => (
                   <div key={i} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Skeleton className="h-4 w-4" />
-                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-4 w-4 rounded-full" />
+                      <Skeleton className="h-4 w-24 rounded" />
                     </div>
-                    <Skeleton className="h-6 w-16" />
+                    <Skeleton className="h-6 w-16 rounded" />
                   </div>
                 ))}
                 <div className="border-t pt-3">
                   <div className="flex items-center justify-between">
-                    <Skeleton className="h-4 w-20" />
-                    <Skeleton className="h-7 w-20" />
+                    <Skeleton className="h-4 w-20 rounded" />
+                    <Skeleton className="h-7 w-20 rounded" />
                   </div>
-                  <Skeleton className="h-3 w-24 mt-1" />
+                  <Skeleton className="h-3 w-24 mt-1 rounded" />
                 </div>
               </div>
             </CardContent>
@@ -418,9 +478,9 @@ export function DashboardContent() {
                   <div key={i} className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
                       <Skeleton className="w-3 h-3 rounded-full" />
-                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className="h-4 w-20 rounded" />
                     </div>
-                    <Skeleton className="h-4 w-16" />
+                    <Skeleton className="h-4 w-16 rounded" />
                   </div>
                 ))}
               </div>
@@ -437,11 +497,11 @@ export function DashboardContent() {
                 {Array.from({ length: 5 }).map((_, i) => (
                   <div key={i} className="flex items-center justify-between">
                     <div>
-                      <Skeleton className="h-4 w-24 mb-1" />
-                      <Skeleton className="h-3 w-32 mb-1" />
-                      <Skeleton className="h-3 w-20" />
+                      <Skeleton className="h-4 w-24 mb-1 rounded" />
+                      <Skeleton className="h-3 w-32 mb-1 rounded" />
+                      <Skeleton className="h-3 w-20 rounded" />
                     </div>
-                    <Skeleton className="h-4 w-16" />
+                    <Skeleton className="h-4 w-16 rounded" />
                   </div>
                 ))}
               </div>
@@ -481,12 +541,6 @@ export function DashboardContent() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {isConverting && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
-              Updating...
-            </div>
-          )}
           <AddExpenseDialog />
         </div>
       </div>
@@ -585,7 +639,7 @@ export function DashboardContent() {
           </Card>
         )}
 
-        <Card className="col-span-2 lg:col-span-4 xl:col-span-1">
+        <Card className={`col-span-2 ${visibleSummaryCards === 5 && 'lg:col-span-4 xl:col-span-1'} ${visibleSummaryCards === 3 && 'md:col-span-1'}`}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div className="flex items-center gap-2">
               <CardTitle className="text-sm font-medium">This Week</CardTitle>
@@ -618,6 +672,9 @@ export function DashboardContent() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Quick Add Expenses */}
+      <QuickAddExpenses showLoading={false} presets={quickAmounts} />
 
       {/* Monthly & Yearly Overview */}
       <div className="grid gap-6 grid-cols-1 lg:grid-cols-5">

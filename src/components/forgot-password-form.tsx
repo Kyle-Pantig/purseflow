@@ -49,23 +49,8 @@ export function ForgotPasswordForm({
   if (success) {
     return (
       <div className={cn("flex flex-col gap-6", className)} {...props}>
-        <Card>
+        <Card className="bg-transparent border-0 shadow-none">
           <CardHeader className="text-center">
-          {/* App Branding */}
-          <div className="flex flex-col items-center gap-4 mb-4">
-            <Image 
-              src="/branding-icon.png" 
-              alt="PurseFlow" 
-              width={48} 
-              height={48}
-              className="h-12 w-12 dark:invert"
-            />
-            <div className="text-center">
-              <h1 className="text-3xl font-bold text-foreground">PurseFlow</h1>
-              <p className="text-sm text-muted-foreground">Expense Tracker & Budget App</p>
-            </div>
-          </div>
-            
             <CardTitle>Check your email</CardTitle>
             <CardDescription>
               We&apos;ve sent a password reset link to your email address
@@ -109,23 +94,8 @@ export function ForgotPasswordForm({
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card>
+      <Card className="bg-transparent border-0 shadow-none">
         <CardHeader className="text-center">
-          {/* App Branding */}
-          <div className="flex flex-col items-center gap-4 mb-4">
-            <Image 
-              src="/branding-icon.png" 
-              alt="PurseFlow" 
-              width={48} 
-              height={48}
-              className="h-12 w-12 dark:invert"
-            />
-            <div className="text-center">
-              <h1 className="text-3xl font-bold text-foreground">PurseFlow</h1>
-              <p className="text-sm text-muted-foreground">Expense Tracker & Budget App</p>
-            </div>
-          </div>
-          
           <CardTitle>Forgot your password?</CardTitle>
           <CardDescription>
             Enter your email address and we&apos;ll send you a link to reset your password

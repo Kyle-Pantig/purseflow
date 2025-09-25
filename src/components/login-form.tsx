@@ -74,23 +74,8 @@ export function LoginForm({
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card>
+      <Card className="bg-transparent border-0 shadow-none">
         <CardHeader className="text-center">
-          {/* App Branding */}
-          <div className="flex flex-col items-center gap-4 mb-4">
-            <Image 
-              src="/branding-icon.png" 
-              alt="PurseFlow" 
-              width={48} 
-              height={48}
-              className="h-12 w-12 dark:invert"
-            />
-            <div className="text-center">
-              <h1 className="text-3xl font-bold text-foreground">PurseFlow</h1>
-              <p className="text-sm text-muted-foreground">Expense Tracker & Budget App</p>
-            </div>
-          </div>
-          
           <CardTitle>{isLogin ? "Login to your account" : "Create an account"}</CardTitle>
           <CardDescription>
             {isLogin 
@@ -140,7 +125,7 @@ export function LoginForm({
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-!transparent !bg-transparent cursor-pointer"
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? (

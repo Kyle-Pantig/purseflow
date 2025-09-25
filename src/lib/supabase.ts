@@ -40,6 +40,38 @@ export type Database = {
           updated_at?: string
         }
       }
+      quick_amounts: {
+        Row: {
+          id: string
+          user_id: string
+          description: string | null
+          category: 'transportation' | 'food' | 'bills' | 'entertainment' | 'shopping' | 'healthcare' | 'education' | 'travel' | 'groceries' | 'utilities' | 'others'
+          amount: number
+          currency_code: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          description?: string | null
+          category: 'transportation' | 'food' | 'bills' | 'entertainment' | 'shopping' | 'healthcare' | 'education' | 'travel' | 'groceries' | 'utilities' | 'others'
+          amount: number
+          currency_code?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          description?: string | null
+          category?: 'transportation' | 'food' | 'bills' | 'entertainment' | 'shopping' | 'healthcare' | 'education' | 'travel' | 'groceries' | 'utilities' | 'others'
+          amount?: number
+          currency_code?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
   }
 }
