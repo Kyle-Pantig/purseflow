@@ -67,7 +67,7 @@ function ResetPasswordContent() {
 
       // For password reset, we need to verify the OTP first
       // The access_token in password reset links is actually a recovery token
-      const { data, error } = await supabase.auth.verifyOtp({
+      const { error } = await supabase.auth.verifyOtp({
         token_hash: accessToken,
         type: 'recovery'
       })
@@ -111,7 +111,7 @@ function ResetPasswordContent() {
         {/* Branding positioned in top left on desktop, centered on mobile */}
         <div className="flex justify-center md:justify-start mb-8">
           <div className="flex items-center gap-4">
-            <img 
+            <Image 
               src="/branding-icon.png" 
               alt="PurseFlow" 
               width={48} 
@@ -156,7 +156,7 @@ function ResetPasswordContent() {
         {/* Branding positioned in top left on desktop, centered on mobile */}
         <div className="flex justify-center md:justify-start mb-8">
           <div className="flex items-center gap-4">
-            <img 
+            <Image 
               src="/branding-icon.png" 
               alt="PurseFlow" 
               width={48} 
@@ -187,7 +187,7 @@ function ResetPasswordContent() {
         {/* Branding positioned in top left on desktop, centered on mobile */}
         <div className="flex justify-center md:justify-start mb-8">
           <div className="flex items-center gap-4">
-            <img 
+            <Image 
               src="/branding-icon.png" 
               alt="PurseFlow" 
               width={48} 
@@ -247,7 +247,7 @@ function ResetPasswordContent() {
       {/* Branding positioned in top left on desktop, centered on mobile */}
       <div className="flex justify-center md:justify-start mb-8">
         <div className="flex items-center gap-4">
-          <img 
+          <Image 
             src="/branding-icon.png" 
             alt="PurseFlow" 
             width={48} 
@@ -368,7 +368,7 @@ export default function ResetPasswordPage() {
         {/* Branding positioned in top left on desktop, centered on mobile */}
         <div className="flex justify-center md:justify-start mb-8">
           <div className="flex items-center gap-4">
-            <img 
+            <Image 
               src="/branding-icon.png" 
               alt="PurseFlow" 
               width={48} 

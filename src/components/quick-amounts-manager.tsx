@@ -43,10 +43,20 @@ const categories = [
   { value: 'others', label: 'Others' },
 ]
 
+type QuickAmountPreset = {
+  id: string
+  description?: string
+  category: string
+  amount: number
+  currency_code: string
+  created_at: string
+  updated_at: string
+}
+
 export function QuickAmountsManager() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [editingPreset, setEditingPreset] = useState<any>(null)
-  const [deletingPreset, setDeletingPreset] = useState<any>(null)
+  const [editingPreset, setEditingPreset] = useState<QuickAmountPreset | null>(null)
+  const [deletingPreset, setDeletingPreset] = useState<QuickAmountPreset | null>(null)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [formData, setFormData] = useState({
     description: '',
@@ -79,7 +89,7 @@ export function QuickAmountsManager() {
     try {
       await createMutation.mutateAsync({
         description: formData.description.trim() || undefined,
-        category: formData.category as any,
+        category: formData.category as 'transportation' | 'food' | 'groceries' | 'bills' | 'entertainment' | 'shopping' | 'healthcare' | 'education' | 'travel' | 'utilities' | 'others',
         amount: parseFloat(formData.amount),
         currency_code: currency.code,
       })
@@ -88,7 +98,7 @@ export function QuickAmountsManager() {
       setIsCreateOpen(false)
       resetForm()
       utils.quickAmounts.getAll.invalidate()
-    } catch (error) {
+    } catch {
       toast.error('Failed to create preset')
     }
   }
@@ -103,7 +113,7 @@ export function QuickAmountsManager() {
       await updateMutation.mutateAsync({
         id: editingPreset.id,
         description: formData.description.trim() || undefined,
-        category: formData.category as any,
+        category: formData.category as 'transportation' | 'food' | 'groceries' | 'bills' | 'entertainment' | 'shopping' | 'healthcare' | 'education' | 'travel' | 'utilities' | 'others',
         amount: parseFloat(formData.amount),
         currency_code: currency.code,
       })
@@ -112,17 +122,17 @@ export function QuickAmountsManager() {
       setEditingPreset(null)
       resetForm()
       utils.quickAmounts.getAll.invalidate()
-    } catch (error) {
+    } catch {
       toast.error('Failed to update preset')
     }
   }
 
-  const handleDeleteClick = (preset: any) => {
+  const handleDeleteClick = (preset: QuickAmountPreset) => {
     setDeletingPreset(preset)
     setIsDeleteOpen(true)
   }
 
-  const handleEdit = (preset: any) => {
+  const handleEdit = (preset: QuickAmountPreset) => {
     setEditingPreset(preset)
     setFormData({
       description: preset.description || '',

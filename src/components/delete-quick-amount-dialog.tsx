@@ -4,8 +4,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button'
 import { AlertTriangle, Trash2 } from 'lucide-react'
 import { trpc } from '@/lib/trpc-client'
-import { formatCurrency } from '@/lib/currency'
-import { useCurrency } from '@/contexts/currency-context'
 
 const categories = [
   { value: 'transportation', label: 'Transportation' },
@@ -36,7 +34,6 @@ interface DeleteQuickAmountDialogProps {
 
 export function DeleteQuickAmountDialog({ open, onOpenChange, preset, onSuccess }: DeleteQuickAmountDialogProps) {
   const utils = trpc.useUtils()
-  const { currency } = useCurrency()
   
   const deletePreset = trpc.quickAmounts.delete.useMutation({
     onSuccess: async () => {

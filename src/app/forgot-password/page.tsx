@@ -1,4 +1,5 @@
 import { Metadata } from 'next'
+import Image from 'next/image'
 import { ForgotPasswordForm } from "@/components/forgot-password-form"
 
 export const metadata: Metadata = {
@@ -12,7 +13,7 @@ export default function ForgotPasswordPage() {
       {/* Branding positioned in top left on desktop, centered on mobile */}
       <div className="flex justify-center md:justify-start mb-8">
         <div className="flex items-center gap-4">
-          <img 
+          <Image 
             src="/branding-icon.png" 
             alt="PurseFlow" 
             width={48} 
