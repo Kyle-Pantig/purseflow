@@ -18,7 +18,6 @@ import { Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
 import { useEffect } from "react"
 import { toast } from "sonner"
-import Image from "next/image"
 
 export function LoginForm({
   className,

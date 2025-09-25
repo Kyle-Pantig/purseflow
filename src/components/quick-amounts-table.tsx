@@ -55,9 +55,27 @@ const categories = [
 
 // Component for table row with currency conversion
 function PresetTableRow({ preset, onEdit, onDelete }: { 
-  preset: any, 
-  onEdit: (preset: any) => void, 
-  onDelete: (preset: any) => void 
+  preset: {
+    id: string
+    amount: number
+    category: string
+    description?: string
+    currency_code: string
+  }, 
+  onEdit: (preset: {
+    id: string
+    amount: number
+    category: string
+    description?: string
+    currency_code: string
+  }) => void, 
+  onDelete: (preset: {
+    id: string
+    amount: number
+    category: string
+    description?: string
+    currency_code: string
+  }) => void 
 }) {
   const { currency } = useCurrency()
   const { convertedAmount, isLoading: isConverting } = useCurrencyAmountWithCurrency(
@@ -100,10 +118,28 @@ function PresetTableRow({ preset, onEdit, onDelete }: {
   )
 }
 
-export function QuickAmountsTable({ presets: externalPresets }: { presets?: any[] } = {}) {
+export function QuickAmountsTable({ presets: externalPresets }: { presets?: {
+  id: string
+  amount: number
+  category: string
+  description?: string
+  currency_code: string
+}[] } = {}) {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [editingPreset, setEditingPreset] = useState<any>(null)
-  const [deletingPreset, setDeletingPreset] = useState<any>(null)
+  const [editingPreset, setEditingPreset] = useState<{
+    id: string
+    amount: number
+    category: string
+    description?: string
+    currency_code: string
+  } | null>(null)
+  const [deletingPreset, setDeletingPreset] = useState<{
+    id: string
+    amount: number
+    category: string
+    description?: string
+    currency_code: string
+  } | null>(null)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [formData, setFormData] = useState({
     description: '',
@@ -141,7 +177,7 @@ export function QuickAmountsTable({ presets: externalPresets }: { presets?: any[
     try {
       await createMutation.mutateAsync({
         description: formData.description.trim() || undefined,
-        category: formData.category as any,
+        category: formData.category as 'transportation' | 'food' | 'groceries' | 'bills' | 'entertainment' | 'shopping' | 'healthcare' | 'education' | 'travel' | 'utilities' | 'others',
         amount: parseFloat(formData.amount),
         currency_code: currency.code,
       })
@@ -150,7 +186,7 @@ export function QuickAmountsTable({ presets: externalPresets }: { presets?: any[
       setIsCreateOpen(false)
       resetForm()
       utils.quickAmounts.getAll.invalidate()
-    } catch (error) {
+    } catch {
       toast.error('Failed to create preset')
     }
   }
@@ -165,7 +201,7 @@ export function QuickAmountsTable({ presets: externalPresets }: { presets?: any[
       await updateMutation.mutateAsync({
         id: editingPreset.id,
         description: formData.description.trim() || undefined,
-        category: formData.category as any,
+        category: formData.category as 'transportation' | 'food' | 'groceries' | 'bills' | 'entertainment' | 'shopping' | 'healthcare' | 'education' | 'travel' | 'utilities' | 'others',
         amount: parseFloat(formData.amount),
         currency_code: currency.code,
       })
@@ -174,17 +210,29 @@ export function QuickAmountsTable({ presets: externalPresets }: { presets?: any[
       setEditingPreset(null)
       resetForm()
       utils.quickAmounts.getAll.invalidate()
-    } catch (error) {
+    } catch {
       toast.error('Failed to update preset')
     }
   }
 
-  const handleDeleteClick = (preset: any) => {
+  const handleDeleteClick = (preset: {
+    id: string
+    amount: number
+    category: string
+    description?: string
+    currency_code: string
+  }) => {
     setDeletingPreset(preset)
     setIsDeleteOpen(true)
   }
 
-  const handleEdit = (preset: any) => {
+  const handleEdit = (preset: {
+    id: string
+    amount: number
+    category: string
+    description?: string
+    currency_code: string
+  }) => {
     setEditingPreset(preset)
     setFormData({
       description: preset.description || '',

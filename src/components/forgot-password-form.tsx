@@ -15,7 +15,6 @@ import { useState } from "react"
 import { resetPassword } from "@/lib/auth"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
-import Image from "next/image"
 
 export function ForgotPasswordForm({
   className,

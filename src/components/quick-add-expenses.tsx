@@ -48,7 +48,13 @@ const categories = [
 
 // Component for individual preset button with currency conversion
 function PresetButton({ preset, onQuickAdd, isAdding }: { 
-  preset: any, 
+  preset: {
+    id: string
+    amount: number
+    category: string
+    description?: string
+    currency_code: string
+  }, 
   onQuickAdd: (id: string, description: string) => void, 
   isAdding: string | null 
 }) {
@@ -91,7 +97,13 @@ export function QuickAddExpenses({
   presets: externalPresets 
 }: { 
   showLoading?: boolean
-  presets?: any[]
+  presets?: {
+    id: string
+    amount: number
+    category: string
+    description?: string
+    currency_code: string
+  }[]
 } = {}) {
   const [isAdding, setIsAdding] = useState<string | null>(null)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
@@ -129,7 +141,7 @@ export function QuickAddExpenses({
       utils.expense.getAllExpenses.invalidate()
       utils.expense.getTodayExpenses.invalidate()
       utils.expense.getRecentExpenses.invalidate()
-    } catch (error) {
+    } catch {
       toast.error('Failed to add expense')
     } finally {
       setIsAdding(null)
@@ -157,7 +169,7 @@ export function QuickAddExpenses({
     try {
       await createMutation.mutateAsync({
         description: formData.description.trim() || undefined,
-        category: formData.category as any,
+        category: formData.category as 'transportation' | 'food' | 'groceries' | 'bills' | 'entertainment' | 'shopping' | 'healthcare' | 'education' | 'travel' | 'utilities' | 'others',
         amount: parseFloat(formData.amount),
         currency_code: currency.code,
       })
@@ -166,7 +178,7 @@ export function QuickAddExpenses({
       setIsAddDialogOpen(false)
       resetForm()
       utils.quickAmounts.getAll.invalidate()
-    } catch (error) {
+    } catch {
       toast.error('Failed to create preset')
     }
   }
